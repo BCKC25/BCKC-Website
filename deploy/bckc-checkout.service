@@ -1,0 +1,18 @@
+[Unit]
+Description=Big Cheese Kettle Co. checkout server
+After=network.target
+
+[Service]
+Type=simple
+User=bckc
+WorkingDirectory=/opt/bckc-website/server
+ExecStart=/usr/bin/node --env-file=.env server.js
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

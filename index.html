@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Small-batch, handmade kettle corn and popcorn from Aiken, SC. Preservative-free and dye-free options. Order online for local delivery or shipping.">
+<meta name="description" content="Small-batch, handmade kettle corn and popcorn from Aiken, SC. Preservative-free and dye-free options. Order online for event pickup, local delivery, or shipping.">
 <link rel="icon" href="img/logo.webp">
 <title>Big Cheese Kettle Co.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,6 +39,7 @@
   --ray-a:#2C241C;--ray-b:#3A2E20;color-scheme:dark}
 
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{scroll-behavior:smooth}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6;margin:0}
@@ -62,7 +63,8 @@ section{padding-block:72px}
 .nav{display:flex;gap:4px;margin-left:auto;overflow-x:auto;min-width:0}
 .nav a{text-decoration:none;color:var(--ink);font-weight:700;padding:8px 12px;border-radius:999px;white-space:nowrap}
 .nav a:hover{background:var(--chip)}
-.nav a.cta{background:var(--rust);color:var(--btn-ink)}
+.nav .cta{background:var(--rust);color:var(--btn-ink);border:0;font:700 1rem var(--body);padding:8px 14px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.nav .cta .count{background:var(--btn-ink);color:var(--rust);border-radius:999px;min-width:22px;padding:0 6px;font-size:.82rem;line-height:22px;text-align:center;font-variant-numeric:tabular-nums}
 @media (max-width:640px){.brand span{display:none}.nav a{padding:8px 9px;font-size:.92rem}}
 
 /* hero */
@@ -123,8 +125,9 @@ section{padding-block:72px}
 .premium li{border:2px solid #5A4A3B;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px}
 .premium li b{font-family:var(--display);font-weight:400;font-size:1.1rem;color:#FFF3D6}
 .premium li span{color:#CDB48C;font-size:.9rem}
-.premium li a{margin-top:auto;color:#F1BE4D;font-weight:800;text-decoration:none}
-.premium li a:hover{text-decoration:underline}
+.premium li .pp{font-family:var(--display);color:#F1BE4D;font-size:1.2rem}
+.premium li button{margin-top:auto;align-self:flex-start;background:#F1BE4D;color:#2A2623;border:0;border-radius:10px;padding:8px 14px;font:800 .95rem var(--body);cursor:pointer}
+.premium li button:hover{background:#FFD36E}
 @media (max-width:760px){.premium{grid-template-columns:1fr;padding:24px}}
 
 /* order / delivery */
@@ -170,6 +173,58 @@ section{padding-block:72px}
 .facts span{border:2px solid var(--rust);color:var(--rust);border-radius:999px;padding:5px 14px;font-weight:800;font-size:.88rem}
 @media (max-width:820px){.about{grid-template-columns:1fr;gap:28px}.about-art{max-width:280px}}
 
+/* cart panel */
+dialog.cart{margin:0 0 0 auto;padding:0;border:0;width:min(520px,100%);max-width:100%;height:100%;max-height:100%;background:var(--bg);color:var(--ink);box-shadow:-8px 0 0 var(--rust)}
+dialog.cart::backdrop{background:rgba(30,20,12,.55)}
+.cart-head{position:sticky;top:0;z-index:2;background:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(16px + env(safe-area-inset-top,0px)) 20px 14px;border-bottom:2px solid var(--line)}
+.cart-head h2{font-size:1.7rem}
+.x{background:var(--chip);border:0;border-radius:999px;width:40px;height:40px;font-size:1.4rem;line-height:1;cursor:pointer;color:var(--ink)}
+.cart-inner{padding:18px 20px calc(28px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:22px}
+.empty{color:var(--ink-soft);margin:0}
+#cart-lines{display:flex;flex-direction:column;gap:10px}
+.line{display:grid;grid-template-columns:minmax(0,1fr) auto 72px;gap:12px;align-items:center;padding-bottom:10px;border-bottom:1px dashed var(--line)}
+.li-name{display:flex;flex-direction:column;min-width:0}
+.li-name span{color:var(--ink-soft);font-size:.9rem}
+.li-total{text-align:right;font-variant-numeric:tabular-nums}
+.qty{display:flex;align-items:center;gap:8px;font-weight:800;font-variant-numeric:tabular-nums}
+.qty button{width:32px;height:32px;border-radius:50%;border:2px solid var(--rust);background:var(--surface);color:var(--rust);font:800 1.1rem var(--body);cursor:pointer;line-height:1}
+.ck{display:flex;flex-direction:column;gap:22px}
+.ck fieldset{border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:10px;min-width:0}
+.ck legend{font-family:var(--display);font-size:1.2rem;color:var(--rust);margin-bottom:10px;padding:0}
+.opt{display:flex;gap:12px;align-items:center;border:2px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;background:var(--surface)}
+.opt:has(input:checked){border-color:var(--rust)}
+.opt:has(input:disabled){opacity:.55;cursor:not-allowed}
+.opt input{accent-color:var(--rust);width:18px;height:18px}
+.opt b{flex:1}
+.opt small{color:var(--ink-soft);font-weight:700}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-weight:700;font-size:.9rem}
+.field input,.field select,.field textarea{font:500 1rem var(--body);padding:11px 12px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--ink);width:100%}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--rust);outline:none}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.row3{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,.6fr) minmax(0,.9fr);gap:10px}
+@media (max-width:420px){.row2,.row3{grid-template-columns:1fr}}
+.totals{display:flex;flex-direction:column;gap:6px;font-variant-numeric:tabular-nums;border-top:2px solid var(--line);padding-top:14px}
+.totals div{display:flex;justify-content:space-between}
+.totals .grand{font-family:var(--display);font-size:1.35rem;color:var(--rust)}
+.totals .fine{color:var(--ink-soft);font-size:.85rem}
+#card-container{min-height:90px}
+#wallets{display:flex;flex-direction:column;gap:10px}
+#google-pay{min-height:44px}
+#apple-pay{-webkit-appearance:-apple-pay-button;-apple-pay-button-type:plain;-apple-pay-button-style:black;height:44px;width:100%;border-radius:10px;border:0;cursor:pointer}
+.or{display:flex;align-items:center;gap:10px;color:var(--ink-soft);font-size:.85rem;font-weight:700}
+.or::before,.or::after{content:"";flex:1;border-top:1px solid var(--line)}
+#pay{width:100%;justify-content:center;font-size:1.1rem}
+#pay:disabled{opacity:.6;cursor:wait;transform:none}
+.err{background:var(--chip);border:2px solid var(--rust);border-radius:10px;padding:10px 12px;color:var(--ink);font-weight:700;margin:0}
+.secure{color:var(--ink-soft);font-size:.85rem;text-align:center;margin:0}
+.done{display:flex;flex-direction:column;gap:14px;align-items:flex-start;padding:28px 20px}
+.done h3{font-size:2rem;color:var(--rust)}
+.done p{margin:0}
+.done .oid{color:var(--ink-soft);font-size:.9rem;font-variant-numeric:tabular-nums}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--kettle);color:#FFF3D6;border-radius:14px;padding:10px 10px 10px 16px;display:flex;align-items:center;gap:12px;box-shadow:4px 4px 0 var(--rust);max-width:calc(100% - 32px);font-weight:700}
+.toast button{background:#F1BE4D;color:#2A2623;border:0;border-radius:10px;padding:8px 12px;font:800 .9rem var(--body);cursor:pointer;white-space:nowrap}
+
 /* footer */
 footer{background:var(--kettle);color:#E7D3AE;padding-block:44px}
 footer .wrap{display:flex;flex-wrap:wrap;gap:28px;justify-content:space-between;align-items:center}
@@ -189,7 +244,7 @@ footer a{color:#F1BE4D}
       <a href="#order">Delivery</a>
       <a href="#events">Events</a>
       <a href="#about">About</a>
-      <a class="cta" href="#menu">Order</a>
+      <button class="cta" id="cart-open" type="button" aria-label="Open cart">Cart <span class="count" id="cart-count" hidden>0</span></button>
     </nav>
   </div>
 </header>
@@ -248,18 +303,18 @@ footer a{color:#F1BE4D}
       <div class="sec-head">
         <span class="eyebrow">Ordering &amp; delivery</span>
         <h2 id="order-h">Get it to your door</h2>
-        <p class="lede">Orders run through Square, so you can pay by card, Apple Pay, or Google Pay. Pick how you want your popcorn at checkout.</p>
+        <p class="lede">Order right here and pay securely through Square. Pick how you want your popcorn at checkout.</p>
       </div>
       <ol class="steps">
-        <li><div><b>Choose your bags</b>Pick flavors and sizes from the menu.</div></li>
+        <li><div><b>Fill your cart</b>Add flavors and sizes from the menu.</div></li>
         <li><div><b>Pick how you get it</b>Event pickup, local delivery, or shipping.</div></li>
-        <li><div><b>Pay on Square</b>You'll get a receipt and order updates by email or text.</div></li>
+        <li><div><b>Pay securely</b>Card payments run through Square. You'll get a receipt right away.</div></li>
       </ol>
       <div class="ways">
         <div class="way">
           <h3>Event pickup</h3>
           <p>Order ahead and grab your bags at our booth. Skip the line at busy events.</p>
-          <p class="meta">Free · choose the event at checkout</p>
+          <p class="meta">Free · pick your event at checkout</p>
         </div>
         <div class="way">
           <h3>Local delivery</h3>
@@ -270,12 +325,12 @@ footer a{color:#F1BE4D}
             <button type="submit">Check</button>
           </form>
           <p class="zip-out" id="zip-out" aria-live="polite"></p>
-          <p class="meta">Delivery fee shown at checkout</p>
+          <p class="meta" id="delivery-meta">Coming soon</p>
         </div>
         <div class="way">
           <h3>Shipping</h3>
-          <p>Outside our delivery area? We ship sealed bags so they arrive crunchy.</p>
-          <p class="meta">Shipping calculated at checkout</p>
+          <p>Outside our delivery area? We can ship your order to you.</p>
+          <p class="meta" id="shipping-meta">Coming soon</p>
         </div>
       </div>
     </div>
@@ -326,19 +381,78 @@ footer a{color:#F1BE4D}
   </div>
 </footer>
 
+<dialog class="cart" id="cart" aria-labelledby="cart-h">
+  <div class="cart-head">
+    <h2 id="cart-h">Your cart</h2>
+    <button type="button" class="x" id="cart-close" aria-label="Close cart">×</button>
+  </div>
+  <div id="cart-body" class="cart-inner">
+    <div id="cart-lines"></div>
+    <form id="checkout" class="ck" novalidate hidden>
+      <fieldset>
+        <legend>How do you want it?</legend>
+        <label class="opt"><input type="radio" name="ff" id="ff-pickup" value="pickup"><b>Event pickup</b><small id="ff-pickup-note"></small></label>
+        <label class="opt"><input type="radio" name="ff" id="ff-delivery" value="delivery"><b>Local delivery</b><small id="ff-delivery-note"></small></label>
+        <label class="opt"><input type="radio" name="ff" id="ff-shipping" value="shipping"><b>Shipping</b><small id="ff-shipping-note"></small></label>
+        <p class="err" id="no-options" hidden>Online ordering opens when our next event is posted. Check back soon!</p>
+        <div class="field" id="ff-event-wrap"><label for="ff-event">Pick up at</label><select id="ff-event"></select></div>
+        <div id="ff-address" class="ck" style="gap:10px" hidden>
+          <div class="field"><label for="a-line1">Street address</label><input id="a-line1" autocomplete="address-line1" data-req></div>
+          <div class="field"><label for="a-line2">Apt, suite (optional)</label><input id="a-line2" autocomplete="address-line2"></div>
+          <div class="row3">
+            <div class="field"><label for="a-city">City</label><input id="a-city" autocomplete="address-level2" data-req></div>
+            <div class="field"><label for="a-state">State</label><input id="a-state" autocomplete="address-level1" maxlength="2" placeholder="SC" data-req></div>
+            <div class="field"><label for="a-zip">ZIP</label><input id="a-zip" autocomplete="postal-code" inputmode="numeric" maxlength="5" pattern="\d{5}" data-req></div>
+          </div>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Your info</legend>
+        <div class="field"><label for="c-name">Name</label><input id="c-name" autocomplete="name" required></div>
+        <div class="row2">
+          <div class="field"><label for="c-email">Email</label><input id="c-email" type="email" autocomplete="email" required></div>
+          <div class="field"><label for="c-phone">Phone</label><input id="c-phone" type="tel" autocomplete="tel" required></div>
+        </div>
+        <div class="field"><label for="c-note">Note (optional)</label><textarea id="c-note" rows="2" maxlength="300" placeholder="Gift message, delivery instructions, best time to reach you"></textarea></div>
+      </fieldset>
+      <div class="totals">
+        <div><span>Subtotal</span><span id="t-sub">$0.00</span></div>
+        <div id="t-fee-row" hidden><span id="t-fee-label"></span><span id="t-fee"></span></div>
+        <div class="grand"><span>Total</span><span id="t-total">$0.00</span></div>
+        <div class="fine"><span>Sales tax included in our prices.</span></div>
+      </div>
+      <fieldset>
+        <legend>Payment</legend>
+        <div id="wallets" hidden>
+          <button type="button" id="apple-pay" aria-label="Pay with Apple Pay" hidden></button>
+          <div id="google-pay"></div>
+          <div class="or">or pay with card</div>
+        </div>
+        <div id="card-container"></div>
+        <p class="err" id="pay-error" role="alert" hidden></p>
+        <button type="submit" class="btn primary" id="pay" disabled>Pay</button>
+        <p class="secure">Payments are processed securely by Square. Your card number never touches our server.</p>
+      </fieldset>
+    </form>
+  </div>
+  <div id="done" class="done" hidden>
+    <h3>Order placed!</h3>
+    <p id="done-msg"></p>
+    <p id="done-receipt"></p>
+    <p class="oid" id="done-id"></p>
+    <button type="button" class="btn primary" id="done-close">Back to the site</button>
+  </div>
+</dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+
 <script>
 /* ============ EDIT THESE ============ */
-// Your Square Online store or a Square payment link. Used when an item has no link of its own.
-const SQUARE_STORE_URL = "";
-// Optional: one Square payment link per item, keyed "flavor-size" (sizes: small, resealable, large; e.g. "cheddar-large").
-const SQUARE_LINKS = {
-  // "original-small": "https://square.link/u/XXXX",
-};
+// Address of your checkout server on the droplet (no trailing slash).
+const API_BASE = "https://api.bigcheesekettleco.com";
 // Booking email shown under the events list (leave "" to hide it).
 const CONTACT_EMAIL = "";
-// ZIP codes you deliver to.
-const DELIVERY_ZIPS = ["29801","29803","29805","29809","29841","29842","29860"];
-// Your events. Dates as YYYY-MM-DD. Past events hide automatically.
+// Your events. Dates as YYYY-MM-DD. Past events hide automatically and
+// upcoming ones become pickup choices at checkout.
 const EVENTS = [
   { date:"2026-10-17", name:"Saturday Market (example)", where:"Downtown Aiken, SC", time:"8 AM – 12 PM" },
   { date:"2026-10-31", name:"Fall Festival (example)", where:"North Augusta, SC", time:"10 AM – 4 PM" },
@@ -354,33 +468,36 @@ const IMG = {
   "chili-lime":["img/chili-lime-large.webp","img/chili-lime-bag.webp"],
   "caramel":["img/caramel-large.webp","img/caramel-bag.webp"],
 };
+// Prices in cents. Keep these matched with server/menu.js.
+const SIZES = { small:["Small",500], resealable:["Resealable",800], large:["Large",1500] };
 const FLAVORS = [
-  {id:"original",name:"Original Kettle Corn",tag:"The classic",desc:"Sweet and salty, popped fresh the old-fashioned way.",small:5,large:15},
-  {id:"cheddar",name:"Cheddar",desc:"Loaded with sharp, savory cheddar flavor.",small:5,large:15},
-  {id:"white-cheddar",name:"White Cheddar",desc:"Creamy, tangy white cheddar for the cheese purists.",small:5,large:15},
-  {id:"pickle",name:"Pickle Popcorn",tag:"Fan favorite",desc:"Tangy dill pickle seasoning. One bite and you're hooked.",small:5,large:15},
-  {id:"chili-lime",name:"Chili Lime",desc:"Zesty lime with a warm chili kick.",small:5,large:15},
-  {id:"caramel",name:"Caramel Corn",desc:"Golden, buttery caramel with a crunchy shell.",small:5,large:15},
+  {id:"original",name:"Original Kettle Corn",tag:"The classic",desc:"Sweet and salty, popped fresh the old-fashioned way."},
+  {id:"cheddar",name:"Cheddar",desc:"Loaded with sharp, savory cheddar flavor."},
+  {id:"white-cheddar",name:"White Cheddar",desc:"Creamy, tangy white cheddar for the cheese purists."},
+  {id:"pickle",name:"Pickle Popcorn",tag:"Fan favorite",desc:"Tangy dill pickle seasoning. One bite and you're hooked."},
+  {id:"chili-lime",name:"Chili Lime",desc:"Zesty lime with a warm chili kick."},
+  {id:"caramel",name:"Caramel Corn",desc:"Golden, buttery caramel with a crunchy shell."},
 ];
-const RESEALABLE_PRICE = 8;
-const PREMIUM_PRICE = 8;
-const PREMIUM_ONLY = [
+const PREMIUM = [
   {id:"jalapeno-cheddar",name:"Jalapeño Cheddar",desc:"Popped in jalapeño-infused olive oil"},
   {id:"black-truffle-parmesan",name:"Black Truffle Parmesan",desc:"Popped in black truffle olive oil"},
   {id:"maple-bacon",name:"Maple Bacon",desc:"Popped in maple bacon olive oil"},
 ];
+const PREMIUM_PRICE = 800;
+const ALL = Object.fromEntries([...FLAVORS,...PREMIUM].map(f=>[f.id,f]));
 
-function orderUrl(key){ return SQUARE_LINKS[key] || SQUARE_STORE_URL || ""; }
-function setOrderLink(a,key){
-  const url = orderUrl(key);
-  if(url){ a.href=url; a.target="_blank"; a.rel="noopener"; }
-  else { a.href="#order"; a.removeAttribute("target"); }
-}
-const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const usd = c => "$" + (c/100).toFixed(c % 100 ? 2 : 0);
+const usd2 = c => "$" + (c/100).toFixed(2);
+const sizeLabel = s => s==="premium" ? "Resealable" : SIZES[s][0];
+const unitPrice = (id,s) => s==="premium" ? PREMIUM_PRICE : SIZES[s][1];
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now()+"-"+Math.random().toString(36).slice(2));
 
-const grid = document.getElementById("flavor-grid");
+/* ---------- menu ---------- */
+const grid = $("#flavor-grid");
 FLAVORS.forEach(f=>{
-  const sizes=[["small","Small",f.small],["resealable","Resealable",RESEALABLE_PRICE],["large","Large",f.large]];
+  const order=["small","resealable","large"];
   const el=document.createElement("article"); el.className="card";
   el.innerHTML=`
     <div class="ph"><img src="${IMG[f.id][0]}" alt="${esc(f.name)} popcorn in a Big Cheese Kettle Co. bag" loading="lazy" width="600" height="822"></div>
@@ -389,44 +506,31 @@ FLAVORS.forEach(f=>{
       <h3>${esc(f.name)}</h3>
       <p>${esc(f.desc)}</p>
       <fieldset class="sizes"><legend>Size for ${esc(f.name)}</legend>
-        ${sizes.map(([k,l,p],i)=>`<input type="radio" name="sz-${f.id}" id="sz-${f.id}-${k}" value="${k}" ${i===2?"checked":""}><label for="sz-${f.id}-${k}">${l}<span class="p">$${p}</span></label>`).join("")}
+        ${order.map((k,i)=>`<input type="radio" name="sz-${f.id}" id="sz-${f.id}-${k}" value="${k}" ${i===2?"checked":""}><label for="sz-${f.id}-${k}">${SIZES[k][0]}<span class="p">${usd(SIZES[k][1])}</span></label>`).join("")}
       </fieldset>
-      <a class="btn primary order-btn">Order Large · $${f.large}</a>
+      <button type="button" class="btn primary order-btn"></button>
     </div>`;
   const btn=el.querySelector(".order-btn"), img=el.querySelector(".ph img");
-  const update=()=>{
-    const k=el.querySelector("input:checked").value;
-    const s=sizes.find(x=>x[0]===k);
-    btn.textContent=`Order ${s[1]} · $${s[2]}`;
-    setOrderLink(btn,`${f.id}-${k}`);
-    img.src = IMG[f.id][k==="resealable"?1:0];
-  };
+  const size=()=>el.querySelector("input:checked").value;
+  const update=()=>{ const k=size(); btn.textContent=`Add ${SIZES[k][0]} · ${usd(SIZES[k][1])}`; img.src=IMG[f.id][k==="resealable"?1:0]; };
   el.querySelectorAll("input").forEach(i=>i.addEventListener("change",update));
+  btn.addEventListener("click",()=>addToCart(f.id,size()));
   update(); grid.appendChild(el);
 });
-
-const pl=document.getElementById("premium-list");
-PREMIUM_ONLY.forEach(p=>{
+PREMIUM.forEach(p=>{
   const li=document.createElement("li");
-  li.innerHTML=`<b>${esc(p.name)}</b><span>${esc(p.desc)}</span><span style="font-family:var(--display);color:#F1BE4D;font-size:1.2rem">$${PREMIUM_PRICE}</span><a>Order →</a>`;
-  setOrderLink(li.querySelector("a"),`${p.id}-premium`);
-  pl.appendChild(li);
+  li.innerHTML=`<b>${esc(p.name)}</b><span>${esc(p.desc)}</span><span class="pp">${usd(PREMIUM_PRICE)}</span><button type="button">Add to cart</button>`;
+  li.querySelector("button").addEventListener("click",()=>addToCart(p.id,"premium"));
+  $("#premium-list").appendChild(li);
 });
 
-document.getElementById("zip-form").addEventListener("submit",e=>{
-  e.preventDefault();
-  const z=document.getElementById("zip-in").value.trim(), out=document.getElementById("zip-out");
-  if(!/^\d{5}$/.test(z)){ out.textContent="Enter a 5-digit ZIP code."; return; }
-  out.textContent = DELIVERY_ZIPS.includes(z) ? `Good news, we deliver to ${z}. Choose local delivery at checkout.` : `${z} is outside our delivery area. Choose shipping at checkout.`;
-});
-
-if(CONTACT_EMAIL){document.getElementById("book-note").innerHTML=`Want us at your market, festival, school, or private party? Email <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>.`;}
+/* ---------- events ---------- */
+const today=new Date(); today.setHours(0,0,0,0);
+const UPCOMING = EVENTS.map(e=>({...e,d:new Date(e.date+"T12:00:00")})).filter(e=>e.d>=today).sort((a,b)=>a.d-b.d);
 (function(){
-  const list=document.getElementById("event-list");
-  const today=new Date(); today.setHours(0,0,0,0);
-  const up=EVENTS.map(e=>({...e,d:new Date(e.date+"T12:00:00")})).filter(e=>e.d>=today).sort((a,b)=>a.d-b.d);
-  if(!up.length){ list.innerHTML=`<p class="lede">New dates coming soon. Check back shortly.</p>`; return; }
-  up.forEach((e,i)=>{
+  const list=$("#event-list");
+  if(!UPCOMING.length){ list.innerHTML=`<p class="lede">New dates coming soon. Check back shortly.</p>`; return; }
+  UPCOMING.forEach(e=>{
     const days=Math.round((e.d-today)/864e5);
     const pill = days===0?"Today":days===1?"Tomorrow":days<=7?`In ${days} days`:e.time;
     const el=document.createElement("div"); el.className="ev";
@@ -436,6 +540,234 @@ if(CONTACT_EMAIL){document.getElementById("book-note").innerHTML=`Want us at you
     list.appendChild(el);
   });
 })();
+if(CONTACT_EMAIL){ $("#book-note").innerHTML=`Want us at your market, festival, school, or private party? Email <a href="mailto:${esc(CONTACT_EMAIL)}">${esc(CONTACT_EMAIL)}</a>.`; }
+
+/* ---------- cart state ---------- */
+let cart = [];
+try { cart = JSON.parse(localStorage.getItem("bckc-cart")||"[]").filter(l=>ALL[l.id] && l.qty>0); } catch(e){ cart=[]; }
+let checkoutKey = uuid();
+function saveCart(){ try{ localStorage.setItem("bckc-cart",JSON.stringify(cart)); }catch(e){} checkoutKey = uuid(); }
+function cartCount(){ return cart.reduce((s,l)=>s+l.qty,0); }
+function cartSubtotal(){ return cart.reduce((s,l)=>s+unitPrice(l.id,l.size)*l.qty,0); }
+
+function addToCart(id,size){
+  const line=cart.find(l=>l.id===id&&l.size===size);
+  if(line) line.qty=Math.min(line.qty+1,50); else cart.push({id,size,qty:1});
+  saveCart(); renderCart();
+  toast(`Added ${ALL[id].name} (${sizeLabel(size)})`);
+}
+function setQty(i,q){ if(q<=0) cart.splice(i,1); else cart[i].qty=Math.min(q,50); saveCart(); renderCart(); }
+
+let toastTimer;
+function toast(msg){
+  const t=$("#toast"); t.innerHTML=`<span>${esc(msg)}</span><button type="button" id="toast-view">View cart</button>`; t.hidden=false;
+  $("#toast-view").onclick=()=>{ t.hidden=true; openCart(); };
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.hidden=true,3200);
+}
+
+/* ---------- server config ---------- */
+let CONFIG=null, configTried=false;
+async function loadConfig(){
+  if(configTried) return CONFIG;
+  configTried=true;
+  if(!API_BASE) return null;
+  try{
+    const r=await fetch(API_BASE+"/api/config");
+    if(r.ok){ const c=await r.json(); if(c.ready) CONFIG=c; }
+  }catch(e){}
+  applyConfigToPage();
+  return CONFIG;
+}
+function applyConfigToPage(){
+  const d=CONFIG?.delivery, s=CONFIG?.shipping;
+  $("#delivery-meta").textContent = d?.enabled ? (d.fee ? `${usd2(d.fee)} delivery fee` : "Free delivery") + (d.freeMinimum ? ` · free over ${usd(d.freeMinimum)}` : "") : "Coming soon";
+  $("#shipping-meta").textContent = s?.enabled ? (s.fee ? `${usd2(s.fee)} shipping` : "Free shipping") + (s.freeMinimum ? ` · free over ${usd(s.freeMinimum)}` : "") + (s.states?.length ? ` · ${s.states.join(", ")} only` : "") : "Coming soon";
+}
+loadConfig();
+
+$("#zip-form").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const z=$("#zip-in").value.trim(), out=$("#zip-out");
+  if(!/^\d{5}$/.test(z)){ out.textContent="Enter a 5-digit ZIP code."; return; }
+  await loadConfig();
+  const d=CONFIG?.delivery;
+  if(!d?.enabled){ out.textContent="Local delivery is coming soon. Choose event pickup for now."; return; }
+  out.textContent = d.zips.includes(z) ? `Good news, we deliver to ${z}.` : `${z} is outside our delivery area.${CONFIG.shipping?.enabled?" Choose shipping at checkout.":""}`;
+});
+
+/* ---------- cart panel ---------- */
+const dlg=$("#cart");
+$("#cart-open").addEventListener("click",openCart);
+$("#cart-close").addEventListener("click",()=>dlg.close());
+dlg.addEventListener("click",e=>{ if(e.target===dlg) dlg.close(); });
+
+async function openCart(){
+  renderCart();
+  if(!dlg.open) dlg.showModal();
+  await loadConfig();
+  renderCart();
+}
+
+function renderCart(){
+  $("#cart-count").textContent=cartCount();
+  $("#cart-count").hidden=!cartCount();
+  if(!dlg.open || $("#done").hidden===false) return;
+  const lines=$("#cart-lines");
+  if(!cart.length){
+    lines.innerHTML=`<p class="empty">Your cart is empty. Pick a flavor from the menu to get started.</p>`;
+    $("#checkout").hidden=true; return;
+  }
+  lines.innerHTML=cart.map((l,i)=>`
+    <div class="line">
+      <div class="li-name"><b>${esc(ALL[l.id].name)}</b><span>${sizeLabel(l.size)} · ${usd(unitPrice(l.id,l.size))}</span></div>
+      <div class="qty" role="group" aria-label="Quantity of ${esc(ALL[l.id].name)}">
+        <button type="button" data-i="${i}" data-d="-1" aria-label="One fewer">−</button>
+        <span>${l.qty}</span>
+        <button type="button" data-i="${i}" data-d="1" aria-label="One more">+</button>
+      </div>
+      <b class="li-total">${usd2(unitPrice(l.id,l.size)*l.qty)}</b>
+    </div>`).join("");
+  lines.querySelectorAll(".qty button").forEach(b=>b.onclick=()=>setQty(+b.dataset.i, cart[+b.dataset.i].qty + +b.dataset.d));
+  $("#checkout").hidden=false;
+  renderFulfillment();
+  requestQuote();
+  if(CONFIG) initPayments();
+}
+
+/* ---------- fulfillment ---------- */
+function renderFulfillment(){
+  const has = {pickup: UPCOMING.length>0, delivery: !!CONFIG?.delivery?.enabled, shipping: !!CONFIG?.shipping?.enabled};
+  for(const k of ["pickup","delivery","shipping"]){
+    const r=$(`#ff-${k}`); r.disabled=!has[k];
+    $(`#ff-${k}-note`).textContent = has[k] ? (k==="pickup"?"Free":k==="delivery"?feeText(CONFIG.delivery):feeText(CONFIG.shipping)) : (k==="pickup"?"No upcoming events":"Coming soon");
+    if(r.disabled && r.checked) r.checked=false;
+  }
+  if(!document.querySelector('input[name="ff"]:checked')){ const first=["pickup","delivery","shipping"].find(k=>has[k]); if(first) $(`#ff-${first}`).checked=true; }
+  const sel=$("#ff-event"), cur=sel.value;
+  sel.innerHTML=UPCOMING.map((e,i)=>`<option value="${i}">${e.d.toLocaleDateString("en-US",{month:"short",day:"numeric"})} · ${esc(e.name)}</option>`).join("");
+  if(cur) sel.value=cur;
+  showFulfillmentFields();
+  const none=!Object.values(has).some(Boolean);
+  $("#no-options").hidden=!none;
+}
+function feeText(o){ return o.fee? usd2(o.fee) + (o.freeMinimum?` (free over ${usd(o.freeMinimum)})`:"") : "Free"; }
+function fulfillmentType(){ return document.querySelector('input[name="ff"]:checked')?.value || ""; }
+function showFulfillmentFields(){
+  const t=fulfillmentType();
+  $("#ff-event-wrap").hidden = t!=="pickup";
+  $("#ff-address").hidden = !(t==="delivery"||t==="shipping");
+  $("#ff-address").querySelectorAll("[data-req]").forEach(i=>i.required = !$("#ff-address").hidden);
+}
+document.querySelectorAll('input[name="ff"]').forEach(r=>r.addEventListener("change",()=>{ showFulfillmentFields(); requestQuote(); }));
+$("#a-zip").addEventListener("change",requestQuote);
+
+function fulfillmentPayload(){
+  const t=fulfillmentType();
+  const f={type:t, note:$("#c-note").value};
+  if(t==="pickup"){
+    const ev=UPCOMING[+$("#ff-event").value];
+    f.event = ev ? {date:ev.date,name:ev.name,where:ev.where,time:ev.time} : null;
+  } else {
+    f.address={line1:$("#a-line1").value,line2:$("#a-line2").value,city:$("#a-city").value,state:$("#a-state").value,zip:$("#a-zip").value};
+    f.zip=$("#a-zip").value.trim();
+  }
+  return f;
+}
+
+/* ---------- quote ---------- */
+let quote=null, quoteSeq=0;
+async function requestQuote(){
+  const seq=++quoteSeq;
+  const local=cartSubtotal();
+  $("#t-sub").textContent=usd2(local);
+  if(!CONFIG){ $("#t-fee-row").hidden=true; $("#t-total").textContent=usd2(local); setPayLabel(local); return; }
+  try{
+    const r=await fetch(API_BASE+"/api/quote",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({items:cart,fulfillment:fulfillmentPayload()})});
+    const j=await r.json();
+    if(seq!==quoteSeq) return;
+    if(!r.ok){ quote=null; showError(j.error); return; }
+    quote=j; showError("");
+    $("#t-sub").textContent=usd2(j.subtotal);
+    $("#t-fee-row").hidden=!j.feeLabel;
+    $("#t-fee-label").textContent=j.feeLabel; $("#t-fee").textContent=j.fee?usd2(j.fee):"Free";
+    $("#t-total").textContent=usd2(j.total);
+    setPayLabel(j.total);
+    walletRequest?.update({total:{amount:(j.total/100).toFixed(2),label:"Big Cheese Kettle Co."}});
+  }catch(e){ if(seq===quoteSeq) showError("We couldn't reach our checkout. Check your connection and try again."); }
+}
+function setPayLabel(c){ $("#pay").textContent=`Pay ${usd2(c)}`; }
+function showError(m){ const e=$("#pay-error"); e.textContent=m||""; e.hidden=!m; }
+
+/* ---------- Square payments ---------- */
+let payments=null, card=null, walletRequest=null, payInit=null, busy=false;
+function loadSquareJs(){
+  return new Promise((res,rej)=>{
+    if(window.Square) return res();
+    const s=document.createElement("script");
+    s.src = CONFIG.environment==="production" ? "https://web.squarecdn.com/v1/square.js" : "https://sandbox.web.squarecdn.com/v1/square.js";
+    s.onload=res; s.onerror=()=>rej(new Error("load")); document.head.appendChild(s);
+  });
+}
+function initPayments(){
+  if(payInit) return payInit;
+  payInit=(async()=>{
+    try{
+      await loadSquareJs();
+      payments=window.Square.payments(CONFIG.applicationId, CONFIG.locationId);
+      card=await payments.card();
+      await card.attach("#card-container");
+      $("#pay").disabled=false;
+      walletRequest=payments.paymentRequest({countryCode:"US",currencyCode:"USD",total:{amount:(cartSubtotal()/100).toFixed(2),label:"Big Cheese Kettle Co."}});
+      try{ const gp=await payments.googlePay(walletRequest); await gp.attach("#google-pay",{buttonColor:"black",buttonSizeMode:"fill",buttonType:"pay"}); $("#google-pay").onclick=()=>pay(gp); $("#wallets").hidden=false; }catch(e){}
+      try{ const ap=await payments.applePay(walletRequest); const b=$("#apple-pay"); b.hidden=false; b.onclick=()=>pay(ap); $("#wallets").hidden=false; }catch(e){}
+    }catch(e){
+      payInit=null;
+      showError("Card payments couldn't load. Refresh the page and try again.");
+    }
+  })();
+  return payInit;
+}
+
+$("#checkout").addEventListener("submit",e=>{ e.preventDefault(); pay(card); });
+
+async function pay(method){
+  if(busy) return;
+  const form=$("#checkout");
+  if(!CONFIG){ showError("Online ordering isn't available right now. Find us at our next event!"); return; }
+  if(!form.reportValidity()) return;
+  if(!fulfillmentType()){ showError("Choose event pickup, local delivery, or shipping."); return; }
+  if(!method){ showError("Card payments are still loading. Try again in a moment."); return; }
+  busy=true; $("#pay").disabled=true; $("#pay").textContent="Processing…"; showError("");
+  try{
+    const result=await method.tokenize();
+    if(result.status!=="OK"){ throw new Error(result.errors?.[0]?.message || "Check your card details and try again."); }
+    const body={ token:result.token, idempotencyKey:checkoutKey, items:cart, fulfillment:fulfillmentPayload(),
+      customer:{name:$("#c-name").value,email:$("#c-email").value,phone:$("#c-phone").value} };
+    const r=await fetch(API_BASE+"/api/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok) throw new Error(j.error||"We couldn't complete your payment. Please try again.");
+    done(j, body);
+  }catch(e){
+    showError(e.message);
+  }finally{
+    busy=false; $("#pay").disabled=false; if(quote) setPayLabel(quote.total); else setPayLabel(cartSubtotal());
+  }
+}
+
+function done(j, body){
+  const t=body.fulfillment.type;
+  const how = t==="pickup" ? `Pick up your order at <b>${esc(body.fulfillment.event?.name)}</b> on ${esc(new Date(body.fulfillment.event?.date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"}))}.`
+    : t==="delivery" ? "We'll reach out to set up your delivery time." : "We'll email you when your order ships.";
+  $("#done-msg").innerHTML=`Thanks, ${esc(body.customer.name.split(" ")[0])}! We charged ${usd2(j.total)}. ${how}`;
+  $("#done-receipt").innerHTML = j.receiptUrl ? `<a href="${esc(j.receiptUrl)}" target="_blank" rel="noopener">View your receipt</a>` : "";
+  $("#done-id").textContent = `Order ${j.orderId}`;
+  cart=[]; saveCart();
+  $("#cart-body").hidden=true; $("#done").hidden=false;
+  $("#cart-count").textContent="0"; $("#cart-count").hidden=true;
+}
+$("#done-close").addEventListener("click",()=>{ dlg.close(); $("#done").hidden=true; $("#cart-body").hidden=false; });
+renderCart();
+
 </script>
 
 </body>
