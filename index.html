@@ -839,7 +839,30 @@ async function pay(method){
   }
 }
 
+// Google Analytics: record the sale (no-op if the Analytics tag isn't on the page).
+function trackPurchase(j, body){
+  try{
+    if(typeof window.gtag!=="function") return;
+    const shipping = quote && quote.fee ? quote.fee/100 : 0;
+    window.gtag("event","purchase",{
+      transaction_id: j.orderId,
+      value: j.total/100,
+      currency: "USD",
+      shipping,
+      fulfillment: body.fulfillment.type,
+      items: body.items.map(l=>({
+        item_id: `${l.id}-${l.size}`,
+        item_name: ALL[l.id].name,
+        item_variant: sizeLabel(l.size),
+        item_category: l.size==="premium" ? "Premium Popcorn" : "Popcorn",
+        price: unitPrice(l.id,l.size)/100,
+        quantity: l.qty,
+      })),
+    });
+  }catch(e){}
+}
 function done(j, body){
+  trackPurchase(j, body);
   const t=body.fulfillment.type;
   const how = t==="pickup" ? `Pick up your order at <b>${esc(body.fulfillment.event?.name)}</b> on ${esc(new Date(body.fulfillment.event?.date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"}))}.`
     : t==="delivery" ? "We'll reach out to set up your delivery time." : "We'll email you when your order ships.";
