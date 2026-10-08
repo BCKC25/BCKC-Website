@@ -1,23 +1,23 @@
-// Package estimates used to get shipping rates from Shippo.
-// These are STARTING GUESSES. Weigh a packed bag and box on a kitchen or
-// postal scale and update the numbers so customers are charged correctly.
+// Package details used to get shipping rates from Shippo.
 //
 // oz    = weight of one filled bag, in ounces
-// space = how much box room one bag takes up (1 = one small snack bag)
+// space = how much box room one bag takes up
+//
+// The standard box holds 6 space units: 6 small bags, 3 resealable bags,
+// or 2 large bags (or a mix, e.g. 1 large + 1 resealable + 1 small).
 
 export const BAGS = {
-  small:      { oz: 2, space: 1 },
-  resealable: { oz: 5, space: 2 },
-  large:      { oz: 7, space: 5 },
-  premium:    { oz: 5, space: 2 }, // Premium flavors come in the resealable pouch
+  small:      { oz: 5,  space: 1 },
+  resealable: { oz: 5,  space: 2 },
+  large:      { oz: 15, space: 3 },
+  premium:    { oz: 5,  space: 2 }, // Premium flavors come in the resealable pouch
 };
 
 // Boxes you ship in, smallest first. Inches and ounces (empty box weight).
-// space = how many "space" units fit in the box.
+// Orders that don't fit in one box are split across several of the largest box.
+// To add a bigger box later, add a line below the standard box.
 export const BOXES = [
-  { name: "Small box",  length: 10, width: 8,  height: 6,  oz: 5,  space: 4 },
-  { name: "Medium box", length: 14, width: 12, height: 8,  oz: 9,  space: 10 },
-  { name: "Large box",  length: 18, width: 14, height: 12, oz: 16, space: 24 },
+  { name: "Standard box", length: 15, width: 12, height: 8, oz: 12, space: 6 }, // oz = ESTIMATE, weigh an empty box
 ];
 
 // Extra weight per box for tissue paper, padding, and the packing slip.
