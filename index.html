@@ -92,7 +92,7 @@ section{padding-block:72px}
 .btn.primary:hover{box-shadow:6px 6px 0 var(--kettle)}
 .hero-art{position:relative;align-self:end;justify-self:center;width:min(100%,400px)}
 .hero-art .bag{border-radius:24px 24px 0 0;border:3px solid var(--rust);border-bottom:0;aspect-ratio:600/700;object-fit:cover;object-position:center 35%;width:100%}
-.hero-art .seal{position:absolute;width:44%;left:-14%;top:6%;filter:drop-shadow(3px 4px 0 rgba(0,0,0,.18));animation:wobble 6s ease-in-out infinite}
+.hero-art .seal{position:absolute;width:44%;height:auto;aspect-ratio:1/1;left:-14%;top:6%;filter:drop-shadow(3px 4px 0 rgba(0,0,0,.18));animation:wobble 6s ease-in-out infinite}
 @keyframes wobble{50%{transform:rotate(-6deg)}}
 .dunes{display:block;width:100%;height:80px;margin-top:-78px;position:relative;z-index:3}
 .dunes .back{fill:var(--mustard)}
@@ -175,8 +175,8 @@ section{padding-block:72px}
 /* about */
 .about{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:48px;align-items:center}
 .about-art{position:relative;max-width:420px;justify-self:center;width:100%}
-.about-art .sun{aspect-ratio:1;border-radius:50%;background:repeating-conic-gradient(from 0deg,var(--ray-a) 0 10deg,var(--ray-b) 10deg 20deg);border:4px solid var(--rust);display:grid;place-items:center}
-.about-art .sun img{width:78%}
+.about-art .sun{aspect-ratio:1/1;width:100%;min-height:0;overflow:hidden;border-radius:50%;background:repeating-conic-gradient(from 0deg,var(--ray-a) 0 10deg,var(--ray-b) 10deg 20deg);border:4px solid var(--rust);display:grid;place-items:center}
+.about-art .sun img{width:78%;height:auto;aspect-ratio:1/1;object-fit:contain}
 .about p{margin:0 0 16px;max-width:62ch}
 .facts{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
 .facts span{border:2px solid var(--rust);color:var(--rust);border-radius:999px;padding:5px 14px;font-weight:800;font-size:.88rem}
