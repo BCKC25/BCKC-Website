@@ -94,7 +94,7 @@ cd server && sudo -u bckc npm ci --omit=dev && sudo systemctl restart bckc-check
 | `ALLOWED_ORIGINS` | Sites allowed to use the checkout |
 | `DELIVERY_FEE` | `0` = free local delivery. Blank = local delivery **off**. |
 | `FREE_DELIVERY_MINIMUM` | Optional free-delivery threshold |
-| `DELIVERY_ZIPS` | Leave blank to use the built-in list of ZIPs within 25 miles of Aiken (`server/delivery-zips.js`). Set a list only to override it. |
+| `DELIVERY_ZIPS` | Leave blank to use the built-in list of ZIPs within 10 miles of Aiken (`server/delivery-zips.js`). Set a list only to override it. |
 | `SHIPPO_API_TOKEN` + `SHIP_FROM_*` | Turns on live Shippo shipping rates. See **Shipping with Shippo** below. |
 | `SHIPPO_SERVICES` | Optional: only offer these Shippo services, e.g. `usps_ground_advantage,usps_priority` |
 | `FREE_SHIPPING_MINIMUM` | Optional: orders at or above this amount get the cheapest shipping option free |
