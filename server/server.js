@@ -38,6 +38,13 @@ const SHIPPING_ON = SHIPPO_ON || SHIPPING_FEE !== null;
 if (!ACCESS_TOKEN || !APPLICATION_ID || !LOCATION_ID) {
   console.warn("Square settings are missing. Fill in SQUARE_ACCESS_TOKEN, SQUARE_APPLICATION_ID and SQUARE_LOCATION_ID in .env.");
 }
+// Sandbox Application IDs start with "sandbox-". Mixing them with production mode breaks the card form.
+const APP_IS_SANDBOX = APPLICATION_ID.startsWith("sandbox-");
+const SQUARE_MISMATCH = APPLICATION_ID && (APP_IS_SANDBOX !== (ENVIRONMENT === "sandbox"));
+if (SQUARE_MISMATCH) {
+  console.error(`SQUARE SETTINGS DON'T MATCH: SQUARE_ENVIRONMENT=${ENVIRONMENT} but SQUARE_APPLICATION_ID is a ${APP_IS_SANDBOX ? "sandbox" : "production"} ID. ` +
+    `Use all three Square values (access token, application ID, location ID) from the ${ENVIRONMENT === "production" ? "Production" : "Sandbox"} tab, or change SQUARE_ENVIRONMENT. Online checkout is OFF until this is fixed.`);
+}
 
 function list(v) { return (v || "").split(",").map(s => s.trim()).filter(Boolean); }
 function money(v) {
@@ -87,7 +94,7 @@ app.get("/api/config", (req, res) => {
     environment: ENVIRONMENT,
     applicationId: APPLICATION_ID,
     locationId: LOCATION_ID,
-    ready: Boolean(ACCESS_TOKEN && APPLICATION_ID && LOCATION_ID),
+    ready: Boolean(ACCESS_TOKEN && APPLICATION_ID && LOCATION_ID && !SQUARE_MISMATCH),
     maxBags: MAX_BAGS_PER_ORDER,
     pickup: { enabled: true },
     delivery: { enabled: DELIVERY_ON, fee: DELIVERY_FEE, freeMinimum: FREE_DELIVERY_MINIMUM, zips: DELIVERY_ZIPS, radiusMiles: list(env.DELIVERY_ZIPS).length ? null : DELIVERY_RADIUS_MILES },
@@ -117,6 +124,7 @@ app.post("/api/shipping-rates", rateLimit(20, 60_000), async (req, res) => {
 
 app.post("/api/checkout", rateLimit(10, 60_000), async (req, res) => {
   try {
+    if (SQUARE_MISMATCH) throw new UserError("Online ordering is temporarily unavailable. Please find us at our next event.");
     const b = req.body || {};
     if (typeof b.token !== "string" || !b.token) throw new UserError("Payment details are missing. Re-enter your card and try again.");
     if (typeof b.idempotencyKey !== "string" || b.idempotencyKey.length < 8 || b.idempotencyKey.length > 100) throw new UserError("Refresh the page and try again.");
