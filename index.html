@@ -175,8 +175,8 @@ section{padding-block:72px}
 /* about */
 .about{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:48px;align-items:center}
 .about-art{position:relative;max-width:420px;justify-self:center;width:100%}
-.about-art .sun{aspect-ratio:1/1;width:100%;min-height:0;overflow:hidden;border-radius:50%;background:repeating-conic-gradient(from 0deg,var(--ray-a) 0 10deg,var(--ray-b) 10deg 20deg);border:4px solid var(--rust);display:grid;place-items:center}
-.about-art .sun img{width:78%;height:auto;aspect-ratio:1/1;object-fit:contain}
+.about-art .photo{aspect-ratio:1/1;width:100%;min-height:0;overflow:hidden;border-radius:50%;border:5px solid var(--rust);box-shadow:0 0 0 7px var(--mustard);background:var(--chip)}
+.about-art .photo img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 30%}
 .about p{margin:0 0 16px;max-width:62ch}
 .facts{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
 .facts span{border:2px solid var(--rust);color:var(--rust);border-radius:999px;padding:5px 14px;font-weight:800;font-size:.88rem}
@@ -372,7 +372,7 @@ footer a{color:#F1BE4D}
   <section id="about" class="alt" aria-labelledby="about-h" style="background:var(--surface);color:var(--ink);border-color:var(--line)">
     <div class="wrap about">
       <div class="about-art">
-        <div class="sun"><img src="img/logo.webp" alt="Big Cheese Kettle Co. logo: a cheerful cheese chef stirring a kettle of popcorn" width="320" height="320"></div>
+        <div class="photo"><img src="img/josh-booth.webp" alt="Josh at the Big Cheese Kettle Co. booth behind a table of fresh popcorn bags" width="720" height="720" loading="lazy"></div>
       </div>
       <div>
         <span class="eyebrow">About me</span>
