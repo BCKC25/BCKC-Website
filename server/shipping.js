@@ -150,7 +150,7 @@ export async function sendOrderToShippo({ orderNumber, lines, addr, customer, ra
     order_number: orderNumber,
     order_status: "PAID",
     placed_at: new Date().toISOString(),
-    to_address: { name: customer.name, ...addr, country: "US", phone: customer.phone, email: customer.email },
+    to_address: { name: customer.name, ...addr, country: "US", phone: usPhone(customer.phone), email: customer.email },
     from_address: FROM_ADDRESS,
     line_items: lines.map(l => ({
       title: `${l.name} (${l.sizeLabel})`,
@@ -171,6 +171,12 @@ export async function sendOrderToShippo({ orderNumber, lines, addr, customer, ra
     weight_unit: "oz",
   };
   return shippo("/orders/", body);
+}
+
+// Shippo and carriers expect a plain 10-digit US number ("+18035550100" -> "8035550100").
+function usPhone(p) {
+  const d = String(p || "").replace(/\D/g, "");
+  return d.length === 11 && d[0] === "1" ? d.slice(1) : d;
 }
 
 // ---------- API ----------
