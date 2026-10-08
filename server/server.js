@@ -7,7 +7,7 @@ import express from "express";
 import crypto from "node:crypto";
 import { MENU, MAX_QTY_PER_LINE } from "./menu.js";
 import {
-  SHIPPO_ON, ShippingError, getShippingOptions, lookupRate, sendOrderToShippo,
+  SHIPPO_ON, ShippingError, getShippingOptions, lookupRate, sendOrderToShippo, MAX_BAGS_PER_ORDER,
   normalizeAddress, addressComplete,
 } from "./shipping.js";
 
@@ -87,6 +87,7 @@ app.get("/api/config", (req, res) => {
     applicationId: APPLICATION_ID,
     locationId: LOCATION_ID,
     ready: Boolean(ACCESS_TOKEN && APPLICATION_ID && LOCATION_ID),
+    maxBags: MAX_BAGS_PER_ORDER,
     pickup: { enabled: true },
     delivery: { enabled: DELIVERY_ON, fee: DELIVERY_FEE, freeMinimum: FREE_DELIVERY_MINIMUM, zips: DELIVERY_ZIPS },
     shipping: { enabled: SHIPPING_ON, live: SHIPPO_ON, fee: SHIPPO_ON ? null : SHIPPING_FEE, freeMinimum: FREE_SHIPPING_MINIMUM, states: SHIP_STATES },
@@ -207,6 +208,10 @@ function priceLines(rawItems) {
     const key = `${it.id}:${it.size}`;
     const prev = merged.get(key);
     merged.set(key, { id: it.id, size: it.size, name: item.name, sizeLabel: size.label, unit: size.price, qty: (prev?.qty || 0) + qty });
+  }
+  const bagCount = [...merged.values()].reduce((s, l) => s + l.qty, 0);
+  if (bagCount > MAX_BAGS_PER_ORDER) {
+    throw new UserError(`Orders of more than ${MAX_BAGS_PER_ORDER} bags are bulk orders. Please email us to set one up.`);
   }
   const lines = [...merged.values()].map(l => ({ ...l, qty: Math.min(l.qty, MAX_QTY_PER_LINE), total: l.unit * Math.min(l.qty, MAX_QTY_PER_LINE) }));
   const subtotal = lines.reduce((s, l) => s + l.total, 0);

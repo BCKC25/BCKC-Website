@@ -1,7 +1,8 @@
 // Shippo: live shipping rates at checkout, and paid orders sent to your Shippo Orders list.
 
 import crypto from "node:crypto";
-import { BAGS, BOXES, PACKING_OZ } from "./packaging.js";
+import { BAGS, BOXES, PACKING_OZ, MAX_BAGS_PER_ORDER } from "./packaging.js";
+export { MAX_BAGS_PER_ORDER };
 
 const env = process.env;
 const TOKEN = env.SHIPPO_API_TOKEN || "";
@@ -31,18 +32,31 @@ if (TOKEN && !SHIPPO_ON) {
 export class ShippingError extends Error {}
 
 // ---------- packing ----------
+// How much of one box this order fills (1 = exactly full). Infinity = a bag doesn't fit that box.
+export function boxFill(box, counts) {
+  let fill = 0;
+  for (const [kind, qty] of Object.entries(counts)) {
+    if (!qty) continue;
+    const per = box.fits[kind] || 0;
+    if (per <= 0) return Infinity;
+    fill += qty / per;
+  }
+  return Math.round(fill * 1e6) / 1e6; // avoid 0.9999999 / 1.0000001 rounding noise
+}
+
 export function buildParcels(lines) {
-  let space = 0, itemOz = 0;
+  const counts = { small: 0, resealable: 0, large: 0 };
+  let itemOz = 0;
   for (const l of lines) {
     const bag = BAGS[l.size];
     if (!bag) throw new ShippingError("One of your items can't be shipped. Choose event pickup instead.");
-    space += bag.space * l.qty;
+    counts[bag.packAs] += l.qty;
     itemOz += bag.oz * l.qty;
   }
   const largest = BOXES[BOXES.length - 1];
-  const fits = BOXES.find(b => b.space >= space);
+  const fits = BOXES.find(b => boxFill(b, counts) <= 1);
   const box = fits || largest;
-  const count = fits ? 1 : Math.ceil(space / largest.space);
+  const count = fits ? 1 : Math.ceil(boxFill(largest, counts));
   const each = box.oz + PACKING_OZ + itemOz / count;
   const parcel = {
     length: String(box.length), width: String(box.width), height: String(box.height), distance_unit: "in",

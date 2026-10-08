@@ -187,6 +187,9 @@ dialog.cart::backdrop{background:rgba(30,20,12,.55)}
 .li-name span{color:var(--ink-soft);font-size:.9rem}
 .li-total{text-align:right;font-variant-numeric:tabular-nums}
 .qty{display:flex;align-items:center;gap:8px;font-weight:800;font-variant-numeric:tabular-nums}
+.qty button:disabled{opacity:.35;cursor:not-allowed}
+.bulk-note{margin:4px 0 0;font-size:.9rem;color:var(--ink-soft)}
+.bulk{margin:0;font-weight:700;color:var(--ink-soft);font-size:.95rem}
 .qty button{width:32px;height:32px;border-radius:50%;border:2px solid var(--rust);background:var(--surface);color:var(--rust);font:800 1.1rem var(--body);cursor:pointer;line-height:1}
 .ck{display:flex;flex-direction:column;gap:22px}
 .ck fieldset{border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:10px;min-width:0}
@@ -292,6 +295,7 @@ footer a{color:#F1BE4D}
           <span><b>Resealable</b> zip pouch · $8</span>
           <span><b>Large</b> share bag · $15</span>
         </div>
+        <p class="bulk" id="bulk-menu-note"></p>
       </div>
       <div class="grid" id="flavor-grid"></div>
 
@@ -498,6 +502,7 @@ const PREMIUM = [
   {id:"maple-bacon",name:"Maple Bacon",desc:"Popped in maple bacon olive oil"},
 ];
 const PREMIUM_PRICE = 800;
+const MAX_BAGS = 10; // bigger orders are handled by email (keep matched with server/packaging.js)
 const ALL = Object.fromEntries([...FLAVORS,...PREMIUM].map(f=>[f.id,f]));
 
 const $ = s => document.querySelector(s);
@@ -554,6 +559,7 @@ const UPCOMING = EVENTS.map(e=>({...e,d:new Date(e.date+"T12:00:00")})).filter(e
     list.appendChild(el);
   });
 })();
+$("#bulk-menu-note").textContent=bulkText();
 if(CONTACT_EMAIL){ $("#book-note").innerHTML=`Want us at your market, festival, school, or private party? Email <a href="mailto:${esc(CONTACT_EMAIL)}">${esc(CONTACT_EMAIL)}</a>.`; }
 
 /* ---------- cart state ---------- */
@@ -564,13 +570,19 @@ function saveCart(){ try{ localStorage.setItem("bckc-cart",JSON.stringify(cart))
 function cartCount(){ return cart.reduce((s,l)=>s+l.qty,0); }
 function cartSubtotal(){ return cart.reduce((s,l)=>s+unitPrice(l.id,l.size)*l.qty,0); }
 
+function bulkText(){ return `Orders of more than ${MAX_BAGS} bags are bulk orders and are set up by email` + (CONTACT_EMAIL?` at ${CONTACT_EMAIL}.`:". Ask us at the booth or reach out to set one up."); }
 function addToCart(id,size){
+  if(cartCount()>=MAX_BAGS){ toast(`Online orders max out at ${MAX_BAGS} bags. Email us for bulk orders.`); return; }
   const line=cart.find(l=>l.id===id&&l.size===size);
-  if(line) line.qty=Math.min(line.qty+1,50); else cart.push({id,size,qty:1});
+  if(line) line.qty+=1; else cart.push({id,size,qty:1});
   saveCart(); renderCart();
   toast(`Added ${ALL[id].name} (${sizeLabel(size)})`);
 }
-function setQty(i,q){ if(q<=0) cart.splice(i,1); else cart[i].qty=Math.min(q,50); saveCart(); renderCart(); }
+function setQty(i,q){
+  if(q<=0) cart.splice(i,1);
+  else { const others=cartCount()-cart[i].qty; cart[i].qty=Math.min(q,MAX_BAGS-others); }
+  saveCart(); renderCart();
+}
 
 let toastTimer;
 function toast(msg){
@@ -645,6 +657,9 @@ function renderCart(){
       <b class="li-total">${usd2(unitPrice(l.id,l.size)*l.qty)}</b>
     </div>`).join("");
   lines.querySelectorAll(".qty button").forEach(b=>b.onclick=()=>setQty(+b.dataset.i, cart[+b.dataset.i].qty + +b.dataset.d));
+  const full=cartCount()>=MAX_BAGS;
+  lines.querySelectorAll('.qty button[data-d="1"]').forEach(b=>b.disabled=full);
+  lines.insertAdjacentHTML("beforeend",`<p class="bulk-note">${full?`<b>You've reached ${MAX_BAGS} bags.</b> `:""}${esc(bulkText())}</p>`);
   $("#checkout").hidden=false;
   renderFulfillment();
   refreshRates();
