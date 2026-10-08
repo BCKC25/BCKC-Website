@@ -229,6 +229,10 @@ dialog.cart::backdrop{background:rgba(30,20,12,.55)}
 .totals .grand{font-family:var(--display);font-size:1.35rem;color:var(--rust)}
 .totals .fine{color:var(--ink-soft);font-size:.85rem}
 #card-container{min-height:90px}
+.card-status{margin:0;font-size:.92rem;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.card-status .muted{color:var(--ink-soft)}
+.card-status .err-inline{color:var(--rust);font-weight:700}
+.card-status .btn{padding:8px 14px}
 #wallets{display:flex;flex-direction:column;gap:10px}
 #google-pay{min-height:44px}
 #apple-pay{-webkit-appearance:-apple-pay-button;-apple-pay-button-type:plain;-apple-pay-button-style:black;height:44px;width:100%;border-radius:10px;border:0;cursor:pointer}
@@ -454,6 +458,7 @@ footer a{color:#F1BE4D}
           <div id="google-pay"></div>
           <div class="or">or pay with card</div>
         </div>
+        <p id="card-status" class="card-status" aria-live="polite" hidden></p>
         <div id="card-container"></div>
         <p class="err" id="pay-error" role="alert" hidden></p>
         <button type="submit" class="btn primary" id="pay" disabled>Pay</button>
@@ -789,24 +794,33 @@ function loadSquareJs(){
     if(window.Square) return res();
     const s=document.createElement("script");
     s.src = CONFIG.environment==="production" ? "https://web.squarecdn.com/v1/square.js" : "https://sandbox.web.squarecdn.com/v1/square.js";
-    s.onload=res; s.onerror=()=>rej(new Error("load")); document.head.appendChild(s);
+    s.onload=res; s.onerror=()=>{ s.remove(); rej(new Error("Square's payment script was blocked or couldn't download")); }; document.head.appendChild(s);
   });
 }
+function withTimeout(promise, ms, what){
+  return Promise.race([promise, new Promise((_,rej)=>setTimeout(()=>rej(new Error(what+" timed out")),ms))]);
+}
+function cardStatus(html){ $("#card-status").innerHTML=html||""; $("#card-status").hidden=!html; }
 function initPayments(){
   if(payInit) return payInit;
+  cardStatus(`<span class="muted">Loading secure card form…</span>`);
   payInit=(async()=>{
     try{
-      await loadSquareJs();
+      await withTimeout(loadSquareJs(),15000,"Loading Square");
       payments=window.Square.payments(CONFIG.applicationId, CONFIG.locationId);
-      card=await payments.card();
-      await card.attach("#card-container");
+      card=await withTimeout(payments.card(),15000,"Creating card form");
+      await withTimeout(card.attach("#card-container"),15000,"Showing card form");
+      cardStatus("");
       $("#pay").disabled=false;
       walletRequest=payments.paymentRequest({countryCode:"US",currencyCode:"USD",total:{amount:(cartSubtotal()/100).toFixed(2),label:"Big Cheese Kettle Co."}});
       try{ const gp=await payments.googlePay(walletRequest); await gp.attach("#google-pay",{buttonColor:"black",buttonSizeMode:"fill",buttonType:"pay"}); $("#google-pay").onclick=()=>pay(gp); $("#wallets").hidden=false; }catch(e){}
       try{ const ap=await payments.applePay(walletRequest); const b=$("#apple-pay"); b.hidden=false; b.onclick=()=>pay(ap); $("#wallets").hidden=false; }catch(e){}
     }catch(e){
       payInit=null;
-      showError("Card payments couldn't load. Refresh the page and try again.");
+      const why=(e&&(e.message||e.name))||"unknown error";
+      console.error("Square card form failed:",e);
+      cardStatus(`<span class="err-inline">The card form didn't load (${esc(why)}). Check your connection, turn off any content or ad blockers for this site, then try again.</span> <button type="button" id="card-retry" class="btn ghost">Try again</button>`);
+      const r=$("#card-retry"); if(r) r.onclick=()=>{ try{ card&&card.destroy&&card.destroy(); }catch(_){}; card=null; $("#card-container").innerHTML=""; initPayments(); };
     }
   })();
   return payInit;
