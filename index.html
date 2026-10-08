@@ -204,6 +204,14 @@ dialog.cart::backdrop{background:rgba(30,20,12,.55)}
 .row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
 .row3{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,.6fr) minmax(0,.9fr);gap:10px}
 @media (max-width:420px){.row2,.row3{grid-template-columns:1fr}}
+.ship-wrap{display:flex;flex-direction:column;gap:6px;min-width:0}
+.lbl{font-weight:700;font-size:.9rem}
+#ship-rates{display:flex;flex-direction:column;gap:8px}
+#ship-rates .opt b{flex:1;display:flex;flex-direction:column;line-height:1.3}
+#ship-rates .opt b span{font-weight:500;font-size:.85rem;color:var(--ink-soft)}
+#ship-rates .opt .amt{font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
+.ship-msg{margin:0;color:var(--ink-soft);font-size:.9rem}
+.ship-msg:empty{display:none}
 .totals{display:flex;flex-direction:column;gap:6px;font-variant-numeric:tabular-nums;border-top:2px solid var(--line);padding-top:14px}
 .totals div{display:flex;justify-content:space-between}
 .totals .grand{font-family:var(--display);font-size:1.35rem;color:var(--rust)}
@@ -404,6 +412,11 @@ footer a{color:#F1BE4D}
             <div class="field"><label for="a-state">State</label><input id="a-state" autocomplete="address-level1" maxlength="2" placeholder="SC" data-req></div>
             <div class="field"><label for="a-zip">ZIP</label><input id="a-zip" autocomplete="postal-code" inputmode="numeric" maxlength="5" pattern="\d{5}" data-req></div>
           </div>
+          <div id="ship-rates-wrap" class="ship-wrap" hidden>
+            <span class="lbl" id="ship-rates-h">Shipping speed</span>
+            <div id="ship-rates" role="radiogroup" aria-labelledby="ship-rates-h"></div>
+            <p class="ship-msg" id="ship-msg" aria-live="polite"></p>
+          </div>
         </div>
       </fieldset>
       <fieldset>
@@ -582,7 +595,10 @@ async function loadConfig(){
 function applyConfigToPage(){
   const d=CONFIG?.delivery, s=CONFIG?.shipping;
   $("#delivery-meta").textContent = d?.enabled ? (d.fee ? `${usd2(d.fee)} delivery fee` : "Free delivery") + (d.freeMinimum ? ` · free over ${usd(d.freeMinimum)}` : "") : "Coming soon";
-  $("#shipping-meta").textContent = s?.enabled ? (s.fee ? `${usd2(s.fee)} shipping` : "Free shipping") + (s.freeMinimum ? ` · free over ${usd(s.freeMinimum)}` : "") + (s.states?.length ? ` · ${s.states.join(", ")} only` : "") : "Coming soon";
+  $("#shipping-meta").textContent = !s?.enabled ? "Coming soon"
+    : (s.live ? "Real carrier rates at checkout" : s.fee ? `${usd2(s.fee)} shipping` : "Free shipping")
+      + (s.freeMinimum ? ` · ${s.live?"cheapest option ":""}free over ${usd(s.freeMinimum)}` : "")
+      + (s.states?.length ? ` · ${s.states.join(", ")} only` : "");
 }
 loadConfig();
 
@@ -631,6 +647,7 @@ function renderCart(){
   lines.querySelectorAll(".qty button").forEach(b=>b.onclick=()=>setQty(+b.dataset.i, cart[+b.dataset.i].qty + +b.dataset.d));
   $("#checkout").hidden=false;
   renderFulfillment();
+  refreshRates();
   requestQuote();
   if(CONFIG) initPayments();
 }
@@ -640,7 +657,7 @@ function renderFulfillment(){
   const has = {pickup: UPCOMING.length>0, delivery: !!CONFIG?.delivery?.enabled, shipping: !!CONFIG?.shipping?.enabled};
   for(const k of ["pickup","delivery","shipping"]){
     const r=$(`#ff-${k}`); r.disabled=!has[k];
-    $(`#ff-${k}-note`).textContent = has[k] ? (k==="pickup"?"Free":k==="delivery"?feeText(CONFIG.delivery):feeText(CONFIG.shipping)) : (k==="pickup"?"No upcoming events":"Coming soon");
+    $(`#ff-${k}-note`).textContent = has[k] ? (k==="pickup"?"Free":k==="delivery"?feeText(CONFIG.delivery):(CONFIG.shipping.live?"Priced by address":feeText(CONFIG.shipping))) : (k==="pickup"?"No upcoming events":"Coming soon");
     if(r.disabled && r.checked) r.checked=false;
   }
   if(!document.querySelector('input[name="ff"]:checked')){ const first=["pickup","delivery","shipping"].find(k=>has[k]); if(first) $(`#ff-${first}`).checked=true; }
@@ -658,9 +675,49 @@ function showFulfillmentFields(){
   $("#ff-event-wrap").hidden = t!=="pickup";
   $("#ff-address").hidden = !(t==="delivery"||t==="shipping");
   $("#ff-address").querySelectorAll("[data-req]").forEach(i=>i.required = !$("#ff-address").hidden);
+  $("#ship-rates-wrap").hidden = !(t==="shipping" && CONFIG?.shipping?.live);
 }
-document.querySelectorAll('input[name="ff"]').forEach(r=>r.addEventListener("change",()=>{ showFulfillmentFields(); requestQuote(); }));
+document.querySelectorAll('input[name="ff"]').forEach(r=>r.addEventListener("change",()=>{ showFulfillmentFields(); refreshRates(); requestQuote(); }));
 $("#a-zip").addEventListener("change",requestQuote);
+let rateTimer;
+["#a-line1","#a-line2","#a-city","#a-state","#a-zip"].forEach(s=>$(s).addEventListener("input",()=>{ clearTimeout(rateTimer); rateTimer=setTimeout(refreshRates,700); }));
+
+/* ---------- live shipping rates (Shippo) ---------- */
+let shipOptions=[], chosenRate="", chosenKey="", rateSeq=0, lastRateReq="";
+function addressPayload(){ return {line1:$("#a-line1").value,line2:$("#a-line2").value,city:$("#a-city").value,state:$("#a-state").value,zip:$("#a-zip").value}; }
+function addressReady(a){ return a.line1.trim() && a.city.trim() && /^[A-Za-z]{2}$/.test(a.state.trim()) && /^\d{5}$/.test(a.zip.trim()); }
+async function refreshRates(){
+  if(fulfillmentType()!=="shipping" || !CONFIG?.shipping?.live) return;
+  const a=addressPayload(), msg=$("#ship-msg");
+  if(!addressReady(a)){ shipOptions=[]; chosenRate=""; $("#ship-rates").innerHTML=""; msg.textContent="Enter your address to see shipping options."; return; }
+  const reqKey=JSON.stringify([cart,a]);
+  if(reqKey===lastRateReq && shipOptions.length) return;
+  lastRateReq=reqKey;
+  const seq=++rateSeq;
+  chosenRate=""; msg.textContent="Getting shipping prices…"; $("#ship-rates").innerHTML="";
+  requestQuote();
+  try{
+    const r=await fetch(API_BASE+"/api/shipping-rates",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({items:cart,address:a})});
+    const j=await r.json().catch(()=>({}));
+    if(seq!==rateSeq) return;
+    if(!r.ok){ lastRateReq=""; shipOptions=[]; msg.textContent=j.error||"We couldn't get shipping prices. Try again."; return; }
+    shipOptions=j.options; msg.textContent="";
+    const keep=shipOptions.find(o=>o.carrier+o.service===chosenKey) || shipOptions[0];
+    chosenRate=keep.id; chosenKey=keep.carrier+keep.service;
+    renderRates(); requestQuote();
+  }catch(e){ if(seq===rateSeq){ lastRateReq=""; msg.textContent="We couldn't reach our shipping service. Check your connection and try again."; } }
+}
+function renderRates(){
+  const wrap=$("#ship-rates");
+  wrap.innerHTML=shipOptions.map(o=>{
+    const when = o.days ? `Est. ${o.days} business day${o.days===1?"":"s"}` : (o.terms||"");
+    const tag = shipOptions.length>1 ? (o.cheapest?"Lowest price":"Fastest") : "";
+    return `<label class="opt"><input type="radio" name="ship-rate" value="${esc(o.id)}" ${o.id===chosenRate?"checked":""}>
+      <b>${esc(o.carrier)} ${esc(o.service)}<span>${esc([tag,when].filter(Boolean).join(" · "))}</span></b>
+      <span class="amt">${o.price?usd2(o.price):"Free"}</span></label>`;
+  }).join("");
+  wrap.querySelectorAll("input").forEach(i=>i.addEventListener("change",()=>{ const o=shipOptions.find(x=>x.id===i.value); chosenRate=o.id; chosenKey=o.carrier+o.service; requestQuote(); }));
+}
 
 function fulfillmentPayload(){
   const t=fulfillmentType();
@@ -669,8 +726,9 @@ function fulfillmentPayload(){
     const ev=UPCOMING[+$("#ff-event").value];
     f.event = ev ? {date:ev.date,start:ev.start,name:ev.name,where:ev.where,time:ev.time} : null;
   } else {
-    f.address={line1:$("#a-line1").value,line2:$("#a-line2").value,city:$("#a-city").value,state:$("#a-state").value,zip:$("#a-zip").value};
+    f.address=addressPayload();
     f.zip=$("#a-zip").value.trim();
+    if(t==="shipping" && chosenRate) f.rateId=chosenRate;
   }
   return f;
 }
@@ -690,7 +748,7 @@ async function requestQuote(){
     quote=j; showError("");
     $("#t-sub").textContent=usd2(j.subtotal);
     $("#t-fee-row").hidden=!j.feeLabel;
-    $("#t-fee-label").textContent=j.feeLabel; $("#t-fee").textContent=j.fee?usd2(j.fee):"Free";
+    $("#t-fee-label").textContent=j.feeLabel; $("#t-fee").textContent=j.pending?"Enter address":(j.fee?usd2(j.fee):"Free");
     $("#t-total").textContent=usd2(j.total);
     setPayLabel(j.total);
     walletRequest?.update({total:{amount:(j.total/100).toFixed(2),label:"Big Cheese Kettle Co."}});
@@ -737,6 +795,7 @@ async function pay(method){
   if(!CONFIG){ showError("Online ordering isn't available right now. Find us at our next event!"); return; }
   if(!form.reportValidity()) return;
   if(!fulfillmentType()){ showError("Choose event pickup, local delivery, or shipping."); return; }
+  if(fulfillmentType()==="shipping" && CONFIG.shipping?.live && !chosenRate){ showError("Enter your address and pick a shipping option."); return; }
   if(!method){ showError("Card payments are still loading. Try again in a moment."); return; }
   busy=true; $("#pay").disabled=true; $("#pay").textContent="Processing…"; showError("");
   try{
@@ -746,7 +805,7 @@ async function pay(method){
       customer:{name:$("#c-name").value,email:$("#c-email").value,phone:$("#c-phone").value} };
     const r=await fetch(API_BASE+"/api/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
     const j=await r.json().catch(()=>({}));
-    if(!r.ok||!j.ok) throw new Error(j.error||"We couldn't complete your payment. Please try again.");
+    if(!r.ok||!j.ok){ if(/Pick your shipping option again/.test(j.error||"")){ lastRateReq=""; refreshRates(); } throw new Error(j.error||"We couldn't complete your payment. Please try again."); }
     done(j, body);
   }catch(e){
     showError(e.message);

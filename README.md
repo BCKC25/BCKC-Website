@@ -95,14 +95,31 @@ cd server && sudo -u bckc npm ci --omit=dev && sudo systemctl restart bckc-check
 | `DELIVERY_FEE` | Blank = local delivery stays **off**. Set it (e.g. `5.00`) to turn it on. |
 | `FREE_DELIVERY_MINIMUM` | Optional free-delivery threshold |
 | `DELIVERY_ZIPS` | ZIPs you deliver to. **Confirm before turning delivery on.** |
-| `SHIPPING_FEE` | Blank = shipping stays **off**. |
-| `FREE_SHIPPING_MINIMUM` | Optional free-shipping threshold |
+| `SHIPPO_API_TOKEN` + `SHIP_FROM_*` | Turns on live Shippo shipping rates. See **Shipping with Shippo** below. |
+| `SHIPPO_SERVICES` | Optional: only offer these Shippo services, e.g. `usps_ground_advantage,usps_priority` |
+| `FREE_SHIPPING_MINIMUM` | Optional: orders at or above this amount get the cheapest shipping option free |
 | `SHIP_STATES` | Limit shipping to these states. Blank = any US state. |
+| `SHIPPING_FEE` | Flat-rate fallback, only used when Shippo isn't set up. Blank = shipping off. |
 | `INCLUSIVE_TAX_PERCENT` | Records sales tax inside your prices in Square's reports. Never adds to the customer's total. Blank to skip. |
 
 After changing `.env`: `sudo systemctl restart bckc-checkout`. The site picks up fee and ZIP changes on its own.
 
 Event pickup is always free and available whenever you have upcoming events listed.
+
+## Shipping with Shippo
+
+When a customer chooses **Shipping** and enters their address, the site asks Shippo for rates and shows two choices: the **lowest price** and the **fastest**. The customer pays Shippo's exact rate. After payment, the order appears in your **Shippo Orders** list with the address and the service they picked, so you can review it and buy the label.
+
+**Set up:**
+
+1. In Shippo, go to **Settings → API** and copy your **test** token (`shippo_test_…`).
+2. Fill in `SHIPPO_API_TOKEN` and the `SHIP_FROM_*` address in `server/.env`, then `sudo systemctl restart bckc-checkout`.
+3. Place a sandbox order with shipping. Test-token orders show up in Shippo's test mode.
+4. When everything looks right, swap in your **live** token (`shippo_live_…`) and restart.
+
+**Package weights:** `server/packaging.js` holds the weight of each bag size and the boxes you ship in. **These start as estimates.** Weigh a packed bag and each empty box, update the numbers, then pull and restart on the droplet. Wrong weights mean wrong shipping charges.
+
+**If an order doesn't reach Shippo:** the customer's payment still goes through. The server log shows a line starting with `ACTION NEEDED` with the Square order number so you can add it in Shippo by hand. Check with `sudo journalctl -u bckc-checkout | grep "ACTION NEEDED"`.
 
 ## 6. Test with sandbox
 

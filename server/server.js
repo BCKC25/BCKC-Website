@@ -6,6 +6,10 @@
 import express from "express";
 import crypto from "node:crypto";
 import { MENU, MAX_QTY_PER_LINE } from "./menu.js";
+import {
+  SHIPPO_ON, ShippingError, getShippingOptions, lookupRate, sendOrderToShippo,
+  normalizeAddress, addressComplete,
+} from "./shipping.js";
 
 // ---------- settings (from .env) ----------
 const env = process.env;
@@ -22,13 +26,13 @@ const ALLOWED_ORIGINS = list(env.ALLOWED_ORIGINS);
 const DELIVERY_FEE = money(env.DELIVERY_FEE);           // blank = local delivery turned off
 const FREE_DELIVERY_MINIMUM = money(env.FREE_DELIVERY_MINIMUM);
 const DELIVERY_ZIPS = list(env.DELIVERY_ZIPS);
-const SHIPPING_FEE = money(env.SHIPPING_FEE);           // blank = shipping turned off
+const SHIPPING_FEE = money(env.SHIPPING_FEE);           // flat rate; only used when Shippo isn't set up
 const FREE_SHIPPING_MINIMUM = money(env.FREE_SHIPPING_MINIMUM);
 const SHIP_STATES = list(env.SHIP_STATES).map(s => s.toUpperCase()); // blank = any US state
 const INCLUSIVE_TAX_PERCENT = env.INCLUSIVE_TAX_PERCENT?.trim() || ""; // recorded inside prices, never added on top
 
 const DELIVERY_ON = DELIVERY_FEE !== null && DELIVERY_ZIPS.length > 0;
-const SHIPPING_ON = SHIPPING_FEE !== null;
+const SHIPPING_ON = SHIPPO_ON || SHIPPING_FEE !== null;
 
 if (!ACCESS_TOKEN || !APPLICATION_ID || !LOCATION_ID) {
   console.warn("Square settings are missing. Fill in SQUARE_ACCESS_TOKEN, SQUARE_APPLICATION_ID and SQUARE_LOCATION_ID in .env.");
@@ -85,13 +89,27 @@ app.get("/api/config", (req, res) => {
     ready: Boolean(ACCESS_TOKEN && APPLICATION_ID && LOCATION_ID),
     pickup: { enabled: true },
     delivery: { enabled: DELIVERY_ON, fee: DELIVERY_FEE, freeMinimum: FREE_DELIVERY_MINIMUM, zips: DELIVERY_ZIPS },
-    shipping: { enabled: SHIPPING_ON, fee: SHIPPING_FEE, freeMinimum: FREE_SHIPPING_MINIMUM, states: SHIP_STATES },
+    shipping: { enabled: SHIPPING_ON, live: SHIPPO_ON, fee: SHIPPO_ON ? null : SHIPPING_FEE, freeMinimum: FREE_SHIPPING_MINIMUM, states: SHIP_STATES },
   });
 });
 
 app.post("/api/quote", rateLimit(60, 60_000), (req, res) => {
   try {
-    res.json(publicQuote(priceCart(req.body)));
+    res.json(publicQuote(priceCart(req.body, { allowPendingShipping: true })));
+  } catch (e) { sendError(res, e); }
+});
+
+// Live shipping options for a cart + address (cheapest and fastest).
+app.post("/api/shipping-rates", rateLimit(20, 60_000), async (req, res) => {
+  try {
+    if (!SHIPPO_ON) throw new UserError("Live shipping rates aren't set up.");
+    const { lines, subtotal } = priceLines(req.body?.items);
+    const addr = normalizeAddress(req.body?.address);
+    if (!addressComplete(addr)) throw new UserError("Enter your full street address, city, 2-letter state, and 5-digit ZIP.");
+    checkShipState(addr.state);
+    const options = await getShippingOptions(lines, addr);
+    const freeCheapest = FREE_SHIPPING_MINIMUM !== null && subtotal >= FREE_SHIPPING_MINIMUM;
+    res.json({ options: options.map(o => ({ ...o, price: o.cheapest && freeCheapest ? 0 : o.amount })) });
   } catch (e) { sendError(res, e); }
 });
 
@@ -103,7 +121,7 @@ app.post("/api/checkout", rateLimit(10, 60_000), async (req, res) => {
 
     const quote = priceCart(b);
     const customer = cleanCustomer(b.customer);
-    const fulfillment = buildFulfillment(quote.fulfillment, b.fulfillment, customer);
+    const fulfillment = buildFulfillment(quote.fulfillment, b.fulfillment, customer, quote);
 
     // Same cart + same checkout attempt = same Square order, so retries never double up.
     const orderKey = hash(b.idempotencyKey + JSON.stringify([quote.lines, quote.fulfillment, customer])).slice(0, 40);
@@ -150,6 +168,20 @@ app.post("/api/checkout", rateLimit(10, 60_000), async (req, res) => {
       ...(typeof b.verificationToken === "string" && b.verificationToken ? { verification_token: b.verificationToken } : {}),
     });
 
+    // Paid shipping orders go to your Shippo Orders list. A Shippo hiccup never undoes a paid order.
+    if (quote.rate) {
+      sendOrderToShippo({
+        orderNumber: sqOrder.id,
+        lines: quote.lines,
+        addr: quote.shipAddress,
+        customer,
+        rate: quote.rate,
+        shippingCost: quote.fee,
+        total,
+      }).then(() => console.log(`Sent order ${sqOrder.id} to Shippo`))
+        .catch(e => console.error(`ACTION NEEDED: order ${sqOrder.id} was paid but didn't reach Shippo. Add it by hand.`, e.message));
+    }
+
     res.json({
       ok: true,
       orderId: sqOrder.id,
@@ -160,8 +192,8 @@ app.post("/api/checkout", rateLimit(10, 60_000), async (req, res) => {
 });
 
 // ---------- pricing ----------
-function priceCart(body) {
-  const items = Array.isArray(body?.items) ? body.items : [];
+function priceLines(rawItems) {
+  const items = Array.isArray(rawItems) ? rawItems : [];
   if (!items.length) throw new UserError("Your cart is empty.");
   if (items.length > 30) throw new UserError("That's a lot of different items. Please call or email us for large orders.");
 
@@ -178,9 +210,17 @@ function priceCart(body) {
   }
   const lines = [...merged.values()].map(l => ({ ...l, qty: Math.min(l.qty, MAX_QTY_PER_LINE), total: l.unit * Math.min(l.qty, MAX_QTY_PER_LINE) }));
   const subtotal = lines.reduce((s, l) => s + l.total, 0);
+  return { lines, subtotal };
+}
 
+function checkShipState(state) {
+  if (SHIP_STATES.length && !SHIP_STATES.includes(state)) throw new UserError(`We only ship to ${SHIP_STATES.join(", ")} right now.`);
+}
+
+function priceCart(body, { allowPendingShipping = false } = {}) {
+  const { lines, subtotal } = priceLines(body?.items);
   const type = body?.fulfillment?.type;
-  let fee = 0, feeLabel = "";
+  let fee = 0, feeLabel = "", pending = false, rate = null, shipAddress = null;
   if (type === "pickup") {
     // free
   } else if (type === "delivery") {
@@ -191,18 +231,35 @@ function priceCart(body) {
     feeLabel = "Local delivery";
   } else if (type === "shipping") {
     if (!SHIPPING_ON) throw new UserError("Shipping isn't available yet. Choose event pickup instead.");
-    fee = FREE_SHIPPING_MINIMUM !== null && subtotal >= FREE_SHIPPING_MINIMUM ? 0 : SHIPPING_FEE;
     feeLabel = "Shipping";
+    const free = FREE_SHIPPING_MINIMUM !== null && subtotal >= FREE_SHIPPING_MINIMUM;
+    if (SHIPPO_ON) {
+      shipAddress = normalizeAddress(body.fulfillment.address);
+      rate = body.fulfillment.rateId ? lookupRate(body.fulfillment.rateId, lines, shipAddress) : null;
+      if (!rate) {
+        if (!allowPendingShipping) {
+          throw new UserError(body.fulfillment.rateId
+            ? "Shipping prices changed because your cart or address changed. Pick your shipping option again."
+            : "Enter your address and pick a shipping option.");
+        }
+        pending = true;
+      } else {
+        fee = free && rate.cheapest ? 0 : rate.amount;
+        feeLabel = `${rate.carrier} ${rate.service}`.trim();
+      }
+    } else {
+      fee = free ? 0 : SHIPPING_FEE;
+    }
   } else {
     throw new UserError("Choose event pickup, local delivery, or shipping.");
   }
-  return { lines, subtotal, fee, feeLabel, total: subtotal + fee, fulfillment: type };
+  return { lines, subtotal, fee, feeLabel, pending, rate, shipAddress, total: subtotal + fee, fulfillment: type };
 }
 
 function publicQuote(q) {
   return {
     lines: q.lines.map(({ id, size, name, sizeLabel, unit, qty, total }) => ({ id, size, name, sizeLabel, unit, qty, total })),
-    subtotal: q.subtotal, fee: q.fee, feeLabel: q.feeLabel, total: q.total,
+    subtotal: q.subtotal, fee: q.fee, feeLabel: q.feeLabel, pending: q.pending, total: q.total,
   };
 }
 
@@ -218,7 +275,7 @@ function cleanCustomer(c) {
   return { name, email, phone };
 }
 
-function buildFulfillment(type, f, customer) {
+function buildFulfillment(type, f, customer, quote = {}) {
   const recipient = { display_name: customer.name, email_address: customer.email, phone_number: customer.phone };
   const note = str(f?.note, 300);
 
@@ -265,14 +322,13 @@ function buildFulfillment(type, f, customer) {
   }
 
   if (type === "shipping") {
-    if (SHIP_STATES.length && !SHIP_STATES.includes(address.administrative_district_level_1)) {
-      throw new UserError(`We only ship to ${SHIP_STATES.join(", ")} right now.`);
+    checkShipState(address.administrative_district_level_1);
+    const details = { recipient: { ...recipient, address }, shipping_note: note || undefined };
+    if (quote.rate) {
+      details.carrier = quote.rate.carrier;
+      details.shipping_type = quote.rate.service;
     }
-    return {
-      type: "SHIPMENT",
-      state: "PROPOSED",
-      shipment_details: { recipient: { ...recipient, address }, shipping_note: note || undefined },
-    };
+    return { type: "SHIPMENT", state: "PROPOSED", shipment_details: details };
   }
   throw new UserError("Choose event pickup, local delivery, or shipping.");
 }
@@ -320,7 +376,7 @@ const CARD_MESSAGES = {
 };
 
 function sendError(res, e) {
-  if (e instanceof UserError) return res.status(400).json({ error: e.message });
+  if (e instanceof UserError || e instanceof ShippingError) return res.status(400).json({ error: e.message });
   if (e.square) {
     console.error(e.message, JSON.stringify(e.square));
     const code = e.square.find(x => CARD_MESSAGES[x.code])?.code;
@@ -335,4 +391,4 @@ if (!env.NO_LISTEN) {
   app.listen(PORT, "127.0.0.1", () => console.log(`Checkout server on http://127.0.0.1:${PORT} (${ENVIRONMENT})`));
 }
 
-export { app, priceCart };
+export { app, priceCart, priceLines };
