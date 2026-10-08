@@ -26,7 +26,7 @@ const ALLOWED_ORIGINS = list(env.ALLOWED_ORIGINS);
 
 const DELIVERY_FEE = money(env.DELIVERY_FEE);           // blank = local delivery turned off
 const FREE_DELIVERY_MINIMUM = money(env.FREE_DELIVERY_MINIMUM);
-const DELIVERY_ZIPS = list(env.DELIVERY_ZIPS).length ? list(env.DELIVERY_ZIPS) : DEFAULT_DELIVERY_ZIPS; // blank = 25-mile list
+const DELIVERY_ZIPS = list(env.DELIVERY_ZIPS).length ? list(env.DELIVERY_ZIPS) : DEFAULT_DELIVERY_ZIPS; // blank = built-in list (server/delivery-zips.js)
 const SHIPPING_FEE = money(env.SHIPPING_FEE);           // flat rate; only used when Shippo isn't set up
 const FREE_SHIPPING_MINIMUM = money(env.FREE_SHIPPING_MINIMUM);
 const SHIP_STATES = list(env.SHIP_STATES).map(s => s.toUpperCase()); // blank = any US state
