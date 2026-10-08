@@ -6,6 +6,7 @@
 import express from "express";
 import crypto from "node:crypto";
 import { MENU, MAX_QTY_PER_LINE } from "./menu.js";
+import { DELIVERY_ZIPS as DEFAULT_DELIVERY_ZIPS, DELIVERY_RADIUS_MILES } from "./delivery-zips.js";
 import {
   SHIPPO_ON, ShippingError, getShippingOptions, lookupRate, sendOrderToShippo, MAX_BAGS_PER_ORDER,
   normalizeAddress, addressComplete,
@@ -25,7 +26,7 @@ const ALLOWED_ORIGINS = list(env.ALLOWED_ORIGINS);
 
 const DELIVERY_FEE = money(env.DELIVERY_FEE);           // blank = local delivery turned off
 const FREE_DELIVERY_MINIMUM = money(env.FREE_DELIVERY_MINIMUM);
-const DELIVERY_ZIPS = list(env.DELIVERY_ZIPS);
+const DELIVERY_ZIPS = list(env.DELIVERY_ZIPS).length ? list(env.DELIVERY_ZIPS) : DEFAULT_DELIVERY_ZIPS; // blank = 25-mile list
 const SHIPPING_FEE = money(env.SHIPPING_FEE);           // flat rate; only used when Shippo isn't set up
 const FREE_SHIPPING_MINIMUM = money(env.FREE_SHIPPING_MINIMUM);
 const SHIP_STATES = list(env.SHIP_STATES).map(s => s.toUpperCase()); // blank = any US state
@@ -89,7 +90,7 @@ app.get("/api/config", (req, res) => {
     ready: Boolean(ACCESS_TOKEN && APPLICATION_ID && LOCATION_ID),
     maxBags: MAX_BAGS_PER_ORDER,
     pickup: { enabled: true },
-    delivery: { enabled: DELIVERY_ON, fee: DELIVERY_FEE, freeMinimum: FREE_DELIVERY_MINIMUM, zips: DELIVERY_ZIPS },
+    delivery: { enabled: DELIVERY_ON, fee: DELIVERY_FEE, freeMinimum: FREE_DELIVERY_MINIMUM, zips: DELIVERY_ZIPS, radiusMiles: list(env.DELIVERY_ZIPS).length ? null : DELIVERY_RADIUS_MILES },
     shipping: { enabled: SHIPPING_ON, live: SHIPPO_ON, fee: SHIPPO_ON ? null : SHIPPING_FEE, freeMinimum: FREE_SHIPPING_MINIMUM, states: SHIP_STATES },
   });
 });
@@ -231,7 +232,7 @@ function priceCart(body, { allowPendingShipping = false } = {}) {
   } else if (type === "delivery") {
     if (!DELIVERY_ON) throw new UserError("Local delivery isn't available yet. Choose event pickup instead.");
     const zip = String(body.fulfillment.zip || body.fulfillment.address?.zip || "").trim();
-    if (zip && !DELIVERY_ZIPS.includes(zip)) throw new UserError(`We don't deliver to ${zip} yet.${SHIPPING_ON ? " Choose shipping instead." : ""}`);
+    if (zip && !DELIVERY_ZIPS.includes(zip)) throw new UserError(`${zip} is outside our local delivery area.${SHIPPING_ON ? " Choose shipping instead." : ""}`);
     fee = FREE_DELIVERY_MINIMUM !== null && subtotal >= FREE_DELIVERY_MINIMUM ? 0 : DELIVERY_FEE;
     feeLabel = "Local delivery";
   } else if (type === "shipping") {
