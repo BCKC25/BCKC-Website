@@ -451,12 +451,13 @@ footer a{color:#F1BE4D}
 const API_BASE = "https://api.bigcheesekettleco.com";
 // Booking email shown under the events list (leave "" to hide it).
 const CONTACT_EMAIL = "";
-// Your events. Dates as YYYY-MM-DD. Past events hide automatically and
-// upcoming ones become pickup choices at checkout.
+// Your events. date = YYYY-MM-DD, start = 24-hour start time (pickup time in Square).
+// Past events hide automatically; upcoming ones become pickup choices at checkout.
 const EVENTS = [
-  { date:"2026-10-17", name:"Saturday Market (example)", where:"Downtown Aiken, SC", time:"8 AM – 12 PM" },
-  { date:"2026-10-31", name:"Fall Festival (example)", where:"North Augusta, SC", time:"10 AM – 4 PM" },
-  { date:"2026-11-14", name:"Holiday Craft Fair (example)", where:"Aiken, SC", time:"9 AM – 3 PM" },
+  { date:"2026-10-09", start:"18:00", name:"Five Elements Wellness Spa", where:"119 Beaty Ln, Aiken, SC 29803", time:"6 – 8 PM" },
+  { date:"2026-10-10", start:"07:30", name:"Aiken Farmers Market", where:"115 Williamsburg St NE, Aiken, SC 29801", time:"7:30 – 11 AM" },
+  { date:"2026-10-17", start:"10:00", name:"Turnkey Tailgate Festival", where:"190 Old Wagener Rd, Aiken, SC 29801", time:"10 AM – 4 PM" },
+  { date:"2026-10-24", start:"10:00", name:"Fall in Love with Downtown", where:"135 Laurens St SW, Aiken, SC 29801", time:"10 AM – 5 PM" },
 ];
 /* ==================================== */
 
@@ -666,7 +667,7 @@ function fulfillmentPayload(){
   const f={type:t, note:$("#c-note").value};
   if(t==="pickup"){
     const ev=UPCOMING[+$("#ff-event").value];
-    f.event = ev ? {date:ev.date,name:ev.name,where:ev.where,time:ev.time} : null;
+    f.event = ev ? {date:ev.date,start:ev.start,name:ev.name,where:ev.where,time:ev.time} : null;
   } else {
     f.address={line1:$("#a-line1").value,line2:$("#a-line2").value,city:$("#a-city").value,state:$("#a-state").value,zip:$("#a-zip").value};
     f.zip=$("#a-zip").value.trim();

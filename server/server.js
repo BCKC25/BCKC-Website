@@ -226,8 +226,9 @@ function buildFulfillment(type, f, customer) {
     const date = String(f?.event?.date || "");
     const eventName = str(f?.event?.name, 120);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !eventName) throw new UserError("Choose the event where you'll pick up.");
-    // Midday Eastern on the event date. The event name and hours go in the note.
-    const pickupAt = new Date(`${date}T16:00:00Z`);
+    // Event start time in Aiken (Eastern), or midday if none given. Name and hours go in the note.
+    const start = /^\d{2}:\d{2}$/.test(String(f?.event?.start || "")) ? f.event.start : "12:00";
+    const pickupAt = easternTime(date, start);
     if (Number.isNaN(pickupAt.getTime()) || pickupAt < startOfToday()) throw new UserError("That event has already happened. Choose an upcoming one.");
     return {
       type: "PICKUP",
@@ -278,6 +279,17 @@ function buildFulfillment(type, f, customer) {
 
 function str(v, max) { return String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max); }
 function hash(s) { return crypto.createHash("sha256").update(s).digest("hex"); }
+// Converts a date + time on the clock in Aiken (handles daylight saving) to a real moment.
+function easternTime(date, hhmm) {
+  const guess = new Date(`${date}T${hhmm}:00Z`);
+  if (Number.isNaN(guess.getTime())) return guess;
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York", hourCycle: "h23",
+    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+  }).formatToParts(guess).map(p => [p.type, p.value]));
+  const shownAsUtc = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute);
+  return new Date(guess.getTime() + (guess.getTime() - shownAsUtc));
+}
 function startOfToday() { const d = new Date(); d.setUTCHours(0, 0, 0, 0); return d; }
 
 // ---------- Square ----------
