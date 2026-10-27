@@ -547,6 +547,22 @@ const sizeLabel = s => s==="premium" ? "Resealable" : SIZES[s][0];
 const unitPrice = (id,s) => s==="premium" ? PREMIUM_PRICE : SIZES[s][1];
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now()+"-"+Math.random().toString(36).slice(2));
 
+/* ---------- shopping events for Meta Pixel + Google Analytics (each skipped if its tag is missing) ---------- */
+function trackShop(metaEvent, gaEvent, items){
+  const sum=items.reduce((s,l)=>s+unitPrice(l.id,l.size)*l.qty,0)/100;
+  try{ if(typeof window.fbq==="function") window.fbq("track",metaEvent,{
+    value:sum, currency:"USD", content_type:"product",
+    content_ids:items.map(l=>`${l.id}-${l.size}`),
+    content_name:items.length===1?ALL[items[0].id].name:undefined,
+    contents:items.map(l=>({id:`${l.id}-${l.size}`,quantity:l.qty,item_price:unitPrice(l.id,l.size)/100})),
+    num_items:items.reduce((n,l)=>n+l.qty,0),
+  }); }catch(e){}
+  try{ if(typeof window.gtag==="function") window.gtag("event",gaEvent,{
+    value:sum, currency:"USD",
+    items:items.map(l=>({item_id:`${l.id}-${l.size}`,item_name:ALL[l.id].name,item_variant:sizeLabel(l.size),price:unitPrice(l.id,l.size)/100,quantity:l.qty})),
+  }); }catch(e){}
+}
+
 /* ---------- menu ---------- */
 const grid = $("#flavor-grid");
 FLAVORS.forEach(f=>{
@@ -569,13 +585,25 @@ FLAVORS.forEach(f=>{
   el.querySelectorAll("input").forEach(i=>i.addEventListener("change",update));
   btn.addEventListener("click",()=>addToCart(f.id,size()));
   update(); grid.appendChild(el);
+  watchView(el, ()=>[{id:f.id,size:size(),qty:1}]);
 });
 PREMIUM.forEach(p=>{
   const li=document.createElement("li");
   li.innerHTML=`<b>${esc(p.name)}</b><span>${esc(p.desc)}</span><span class="pp">${usd(PREMIUM_PRICE)}</span><button type="button">Add to cart</button>`;
   li.querySelector("button").addEventListener("click",()=>addToCart(p.id,"premium"));
   $("#premium-list").appendChild(li);
+  watchView(li, ()=>[{id:p.id,size:"premium",qty:1}]);
 });
+// ViewContent: fires once per item per visit when it's mostly on screen for a second.
+function watchView(el, items){
+  if(!("IntersectionObserver" in window)) return;
+  let timer;
+  const io=new IntersectionObserver(([e])=>{
+    if(e.isIntersecting){ timer=setTimeout(()=>{ io.disconnect(); trackShop("ViewContent","view_item",items()); },1000); }
+    else clearTimeout(timer);
+  },{threshold:0.6});
+  io.observe(el);
+}
 
 /* ---------- events ---------- */
 const today=new Date(); today.setHours(0,0,0,0);
@@ -611,6 +639,7 @@ function addToCart(id,size){
   const line=cart.find(l=>l.id===id&&l.size===size);
   if(line) line.qty+=1; else cart.push({id,size,qty:1});
   saveCart(); renderCart();
+  trackShop("AddToCart","add_to_cart",[{id,size,qty:1}]);
   toast(`Added ${ALL[id].name} (${sizeLabel(size)})`);
 }
 function setQty(i,q){
@@ -661,6 +690,12 @@ $("#zip-form").addEventListener("submit",async e=>{
 
 /* ---------- cart panel ---------- */
 const dlg=$("#cart");
+// InitiateCheckout: once per order, the first time they start filling in checkout.
+let checkoutTracked=false;
+$("#checkout").addEventListener("focusin",()=>{
+  if(checkoutTracked || !cart.length) return;
+  checkoutTracked=true; trackShop("InitiateCheckout","begin_checkout",cart);
+});
 $("#cart-open").addEventListener("click",openCart);
 $("#cart-close").addEventListener("click",()=>dlg.close());
 dlg.addEventListener("click",e=>{ if(e.target===dlg) dlg.close(); });
@@ -918,7 +953,7 @@ function done(j, body){
   $("#done-msg").innerHTML=`Thanks, ${esc(body.customer.name.split(" ")[0])}! We charged ${usd2(j.total)}. ${how}`;
   $("#done-receipt").innerHTML = j.receiptUrl ? `<a href="${esc(j.receiptUrl)}" target="_blank" rel="noopener">View your receipt</a>` : "";
   $("#done-id").textContent = `Order ${j.orderId}`;
-  cart=[]; saveCart();
+  cart=[]; saveCart(); checkoutTracked=false;
   $("#cart-body").hidden=true; $("#done").hidden=false;
   $("#cart-count").textContent="0"; $("#cart-count").hidden=true;
 }
