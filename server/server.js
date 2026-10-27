@@ -11,6 +11,7 @@ import {
   SHIPPO_ON, ShippingError, getShippingOptions, lookupRate, sendOrderToShippo, MAX_BAGS_PER_ORDER,
   normalizeAddress, addressComplete,
 } from "./shipping.js";
+import { META_ON, sendPurchaseToMeta } from "./meta.js";
 
 // ---------- settings (from .env) ----------
 const env = process.env;
@@ -45,6 +46,10 @@ if (SQUARE_MISMATCH) {
   console.error(`SQUARE SETTINGS DON'T MATCH: SQUARE_ENVIRONMENT=${ENVIRONMENT} but SQUARE_APPLICATION_ID is a ${APP_IS_SANDBOX ? "sandbox" : "production"} ID. ` +
     `Use all three Square values (access token, application ID, location ID) from the ${ENVIRONMENT === "production" ? "Production" : "Sandbox"} tab, or change SQUARE_ENVIRONMENT. Online checkout is OFF until this is fixed.`);
 }
+
+// Meta purchase tracking: real orders always; sandbox orders only when a test event code is set.
+const META_SEND = META_ON && (ENVIRONMENT === "production" || Boolean(env.META_TEST_EVENT_CODE?.trim()));
+console.log(META_SEND ? "Meta Conversions API: on" : "Meta Conversions API: off");
 
 function list(v) { return (v || "").split(",").map(s => s.trim()).filter(Boolean); }
 function money(v) {
@@ -190,6 +195,20 @@ app.post("/api/checkout", rateLimit(10, 60_000), async (req, res) => {
         total,
       }).then(() => console.log(`Sent order ${sqOrder.id} to Shippo`))
         .catch(e => console.error(`ACTION NEEDED: order ${sqOrder.id} was paid but didn't reach Shippo. Add it by hand.`, e.message));
+    }
+
+    // Tell Meta about the sale. Never holds up or undoes a paid order.
+    if (META_SEND) {
+      const a = quote.fulfillment === "pickup" ? null : (b.fulfillment?.address || {});
+      sendPurchaseToMeta({
+        orderId: sqOrder.id,
+        total,
+        lines: quote.lines,
+        customer,
+        address: a && { city: str(a.city, 60), state: str(a.state, 2), zip: str(a.zip, 10) },
+        req,
+        browser: b.meta,
+      }).catch(e => console.error(`Meta purchase event failed for order ${sqOrder.id}:`, e.message));
     }
 
     res.json({

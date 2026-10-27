@@ -861,7 +861,7 @@ async function pay(method){
     const result=await method.tokenize();
     if(result.status!=="OK"){ throw new Error(result.errors?.[0]?.message || "Check your card details and try again."); }
     const body={ token:result.token, idempotencyKey:checkoutKey, items:cart, fulfillment:fulfillmentPayload(),
-      customer:{name:$("#c-name").value,email:$("#c-email").value,phone:$("#c-phone").value} };
+      customer:{name:$("#c-name").value,email:$("#c-email").value,phone:$("#c-phone").value}, meta:metaIds() };
     const r=await fetch(API_BASE+"/api/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
     const j=await r.json().catch(()=>({}));
     if(!r.ok||!j.ok){ if(/Pick your shipping option again/.test(j.error||"")){ lastRateReq=""; refreshRates(); } throw new Error(j.error||"We couldn't complete your payment. Please try again."); }
@@ -873,6 +873,11 @@ async function pay(method){
   }
 }
 
+// Meta browser IDs, passed to the checkout server so its Purchase event matches this visitor.
+function metaIds(){
+  const c=n=>{ const m=document.cookie.match(new RegExp("(?:^|; )"+n+"=([^;]*)")); return m?decodeURIComponent(m[1]):""; };
+  return { fbp:c("_fbp"), fbc:c("_fbc"), url:location.href.split("#")[0] };
+}
 // Record the sale in Google Analytics and the Meta Pixel (each is a no-op if its tag isn't on the page).
 function trackPurchase(j, body){
   try{

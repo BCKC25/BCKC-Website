@@ -101,6 +101,8 @@ cd server && sudo -u bckc npm ci --omit=dev && sudo systemctl restart bckc-check
 | `SHIP_STATES` | Limit shipping to these states. Blank = any US state. |
 | `SHIPPING_FEE` | Flat-rate fallback, only used when Shippo isn't set up. Blank = shipping off. |
 | `INCLUSIVE_TAX_PERCENT` | Records sales tax inside your prices in Square's reports. Never adds to the customer's total. Blank to skip. |
+| `META_PIXEL_ID`, `META_CAPI_TOKEN` | Sends each paid order to Meta as a Purchase event (Conversions API). Token blank = off. Only real (production) orders are sent. |
+| `META_TEST_EVENT_CODE` | Optional: a code from Events Manager → Test events. While set, events show up there and sandbox orders are sent too. Clear it after testing. |
 
 After changing `.env`: `sudo systemctl restart bckc-checkout`. The site picks up fee and ZIP changes on its own.
 
