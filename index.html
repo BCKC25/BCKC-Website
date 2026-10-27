@@ -873,8 +873,18 @@ async function pay(method){
   }
 }
 
-// Google Analytics: record the sale (no-op if the Analytics tag isn't on the page).
+// Record the sale in Google Analytics and the Meta Pixel (each is a no-op if its tag isn't on the page).
 function trackPurchase(j, body){
+  try{
+    if(typeof window.fbq==="function") window.fbq("track","Purchase",{
+      value: j.total/100,
+      currency: "USD",
+      content_type: "product",
+      content_ids: body.items.map(l=>`${l.id}-${l.size}`),
+      contents: body.items.map(l=>({ id: `${l.id}-${l.size}`, quantity: l.qty, item_price: unitPrice(l.id,l.size)/100 })),
+      num_items: body.items.reduce((n,l)=>n+l.qty,0),
+    },{ eventID: String(j.orderId) });
+  }catch(e){}
   try{
     if(typeof window.gtag!=="function") return;
     const shipping = quote && quote.fee ? quote.fee/100 : 0;
