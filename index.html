@@ -493,23 +493,14 @@ footer a{color:#F1BE4D}
 </dialog>
 <div class="toast" id="toast" role="status" hidden></div>
 
+<script src="events.js"></script>
 <script>
 /* ============ EDIT THESE ============ */
 // Address of your checkout server on the droplet (no trailing slash).
 const API_BASE = "https://api.bigcheesekettleco.com";
 // Booking email shown under the events list (leave "" to hide it).
 const CONTACT_EMAIL = "j.lovett@bigcheesekettle.com";
-// Your events. date = YYYY-MM-DD, start = 24-hour start time (pickup time in Square).
-// Past events hide automatically; upcoming ones become pickup choices at checkout.
-const EVENTS = [
-  { date:"2026-10-09", start:"18:00", name:"Five Elements Wellness Spa", where:"119 Beaty Ln, Aiken, SC 29803", time:"6 – 8 PM" },
-  { date:"2026-10-10", start:"07:30", name:"Aiken Farmers Market", where:"115 Williamsburg St NE, Aiken, SC 29801", time:"7:30 – 11 AM" },
-  { date:"2026-10-17", start:"10:00", name:"Turnkey Tailgate Festival", where:"190 Old Wagener Rd, Aiken, SC 29801", time:"10 AM – 4 PM" },
-  { date:"2026-10-24", start:"07:30", name:"Aiken Farmers Market", where:"115 Williamsburg St NE, Aiken, SC 29801", time:"7:30 – 11:30 AM" },
-  { date:"2026-10-24", start:"10:00", name:"Fall in Love with Downtown", where:"135 Laurens St SW, Aiken, SC 29801", time:"10 AM – 5 PM" },
-  { date:"2026-10-24", start:"15:00", name:"City of Aiken Trunk or Treat", where:"Citizens Park, 1060 Banks Mill Rd, Aiken, SC 29803", time:"3 – 6 PM" },
-  { date:"2026-10-31", start:"07:30", name:"Aiken Farmers Market", where:"115 Williamsburg St NE, Aiken, SC 29801", time:"7:30 – 11:30 AM" },
-];
+// Events live in events.js. Edit that file to add or change dates.
 /* ==================================== */
 
 const IMG = {
@@ -607,7 +598,32 @@ function watchView(el, items){
 
 /* ---------- events ---------- */
 const today=new Date(); today.setHours(0,0,0,0);
-const UPCOMING = EVENTS.map(e=>({...e,d:new Date(e.date+"T12:00:00")})).filter(e=>e.d>=today).sort((a,b)=>a.d-b.d);
+const UPCOMING = buildEvents(window.BCKC_EVENTS);
+// Turns events.js (one-time + weekly repeating events) into a sorted list of upcoming dates.
+function buildEvents(cfg){
+  if(!cfg) return [];
+  const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  const day=s=>/^\d{4}-\d{2}-\d{2}$/.test(String(s||""))?new Date(s+"T12:00:00"):null;
+  const DAYS=["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+  const out=[], seen=new Set();
+  const add=(e,date)=>{
+    const d=day(date); if(!d||d<today||!e.name) return;
+    const key=date+"|"+e.name+"|"+(e.start||""); if(seen.has(key)) return; seen.add(key);
+    out.push({date,start:e.start||"",name:e.name,where:e.where||"",time:e.time||"",d});
+  };
+  (cfg.oneTime||[]).forEach(e=>add(e,e.date));
+  const horizon=new Date(today); horizon.setDate(horizon.getDate()+(+cfg.showRepeatingDaysAhead||28));
+  (cfg.repeating||[]).forEach(r=>{
+    const wd=new Set([].concat(r.every||[]).map(x=>DAYS.indexOf(String(x).trim().toLowerCase())).filter(i=>i>=0));
+    const skip=new Set(r.skip||[]);
+    const from=day(r.from)||today, until=day(r.until);
+    const d=new Date(Math.max(from,today)); d.setHours(12,0,0,0);
+    for(; d<=horizon && (!until||d<=until); d.setDate(d.getDate()+1)){
+      const s=ymd(d); if(wd.has(d.getDay()) && !skip.has(s)) add(r,s);
+    }
+  });
+  return out.sort((a,b)=>a.d-b.d || a.start.localeCompare(b.start));
+}
 (function(){
   const list=$("#event-list");
   if(!UPCOMING.length){ list.innerHTML=`<p class="lede">New dates coming soon. Check back shortly.</p>`; return; }
