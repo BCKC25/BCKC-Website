@@ -12,8 +12,9 @@
 
 window.BCKC_EVENTS = {
 
-  // How far ahead repeating events are shown (in days).
-  showRepeatingDaysAhead: 28,
+  // How far ahead repeating events are shown, in calendar months.
+  // 1 means up to the same day next month (Oct 28 shows through Nov 28).
+  showRepeatingMonthsAhead: 1,
 
   // Events that repeat every week.
   //   every: day of the week, or a list like ["Friday", "Saturday"]

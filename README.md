@@ -27,7 +27,7 @@ All events live in `events.js`, the only file you need to edit to change dates.
 
 - `oneTime`: a single date. One line per event.
 - `repeating`: weekly events like the farmers market. Set `every` (a day, or a list of days), `from`, an optional `until`, and `skip` for dates you won't be there. To change the hours for one date, add that date to `skip` and add a one-time event for it.
-- `showRepeatingDaysAhead`: how far ahead repeating dates appear (default 28 days).
+- `showRepeatingMonthsAhead`: how far ahead repeating dates appear, in calendar months (default 1, so Oct 28 shows through Nov 28).
 
 Past dates hide on their own, and every upcoming date becomes a pickup choice at checkout. You can edit `events.js` right on github.com (pencil icon, then **Commit changes**) and the site updates in a minute or two.
 

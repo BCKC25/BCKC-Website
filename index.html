@@ -612,7 +612,10 @@ function buildEvents(cfg){
     out.push({date,start:e.start||"",name:e.name,where:e.where||"",time:e.time||"",d});
   };
   (cfg.oneTime||[]).forEach(e=>add(e,e.date));
-  const horizon=new Date(today); horizon.setDate(horizon.getDate()+(+cfg.showRepeatingDaysAhead||28));
+  // Repeats show up to N calendar months ahead (Oct 28 -> Nov 28), clamped for short months.
+  const months=+cfg.showRepeatingMonthsAhead||1;
+  const horizon=new Date(today.getFullYear(), today.getMonth()+months, 1, 23, 59);
+  horizon.setDate(Math.min(today.getDate(), new Date(horizon.getFullYear(), horizon.getMonth()+1, 0).getDate()));
   (cfg.repeating||[]).forEach(r=>{
     const wd=new Set([].concat(r.every||[]).map(x=>DAYS.indexOf(String(x).trim().toLowerCase())).filter(i=>i>=0));
     const skip=new Set(r.skip||[]);
